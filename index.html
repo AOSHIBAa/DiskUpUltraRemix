@@ -3,25 +3,35 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ディスクアップUR ビタ押し練習（ログ取得版）</title>
+<title>ディスクアップUR ビタ押し練習</title>
 <style>
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
 
   body {
     margin: 0;
-    background: #222;
-    color: #fff;
+    background: #1f1f1f;
+    color: #ffffff;
     font-family: sans-serif;
     text-align: center;
   }
 
+  #app {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px 12px 28px;
+  }
+
   #controls {
-    margin: 18px 0 14px;
+    margin: 8px 0 14px;
   }
 
   #start-btn {
-    padding: 14px 34px;
-    font-size: 16px;
+    width: 100%;
+    padding: 16px 20px;
+    font-size: 18px;
     font-weight: bold;
     cursor: pointer;
     touch-action: manipulation;
@@ -30,11 +40,9 @@
   .machine {
     display: flex;
     justify-content: center;
-    gap: 2%;
+    gap: 10px;
     width: 100%;
-    max-width: 520px;
-    margin: 0 auto 16px;
-    padding: 0 14px;
+    margin: 0 auto 14px;
   }
 
   .reel-container {
@@ -43,6 +51,7 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   .reel-window {
@@ -50,8 +59,8 @@
     aspect-ratio: 7 / 10;
     position: relative;
     overflow: hidden;
-    border: 2px solid #ffcc00;
-    background: #fff;
+    border: 2px solid #f0c400;
+    background: #ffffff;
   }
 
   .reel-strip-wrapper {
@@ -59,24 +68,32 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: calc(100% * 40 / 3);
+    height: calc(100% * 40 / 3); /* 20コマ × 2枚 */
     will-change: transform;
   }
 
   .reel-image {
     width: 100%;
     height: 50%;
-    background-image: url('http://ao11119999.web.fc2.com/img/IMG_20260324_191214.jpg');
+    background-image: url('./assets/reel.jpg');
     background-size: 300% 100%;
     background-repeat: no-repeat;
     background-position-y: 0%;
   }
 
-  .reel-left .reel-image   { background-position-x: 0%; }
-  .reel-center .reel-image { background-position-x: 50%; }
-  .reel-right .reel-image  { background-position-x: 100%; }
+  .reel-left .reel-image {
+    background-position-x: 0%;
+  }
 
-  .center-line {
+  .reel-center .reel-image {
+    background-position-x: 50%;
+  }
+
+  .reel-right .reel-image {
+    background-position-x: 100%;
+  }
+
+  .center-band {
     position: absolute;
     top: 33.333333%;
     left: 0;
@@ -94,144 +111,193 @@
     width: 100%;
     height: 2px;
     background: rgba(0, 255, 255, 0.95);
-    box-shadow: 0 0 6px rgba(0,255,255,0.9);
+    box-shadow: 0 0 6px rgba(0, 255, 255, 0.9);
     pointer-events: none;
     z-index: 11;
   }
 
   .stop-btn {
     width: 100%;
-    padding: 12px 0;
-    font-size: 15px;
+    padding: 14px 8px;
+    font-size: 17px;
     font-weight: bold;
     cursor: pointer;
     touch-action: manipulation;
   }
 
-  #result-board, #target-info, #log-panel {
-    width: 92%;
-    max-width: 520px;
+  .panel {
+    width: 100%;
     margin: 0 auto 12px;
     padding: 12px;
-    background: #111;
+    background: #0f0f0f;
     border: 1px solid #444;
     text-align: left;
-    font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.65;
   }
 
-  #target-info {
-    background: #1a1a1a;
-    border-color: #3a3a3a;
+  .panel-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .subtle {
+    color: #d0d0d0;
     font-size: 13px;
-    color: #ddd;
   }
 
-  .good { color: #7dff98; font-weight: bold; }
-  .warn { color: #ffd36b; font-weight: bold; }
-  .bad  { color: #ff8f8f; font-weight: bold; }
-  .info { color: #7fe7ff; font-weight: bold; }
+  .judge-good {
+    color: #7dff98;
+    font-weight: bold;
+  }
+
+  .judge-info {
+    color: #7fe7ff;
+    font-weight: bold;
+  }
+
+  .judge-warn {
+    color: #ffd36b;
+    font-weight: bold;
+  }
+
+  .judge-bad {
+    color: #ff8f8f;
+    font-weight: bold;
+  }
+
+  .big-result {
+    margin-top: 8px;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1.3;
+  }
+
+  .small-result {
+    font-size: 15px;
+    margin-top: 4px;
+  }
+
+  #stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    font-size: 14px;
+  }
 
   #log-controls {
     display: flex;
     gap: 8px;
-    margin: 10px 0 12px;
+    margin: 8px 0 10px;
   }
 
   #log-controls button {
     flex: 1;
-    padding: 10px 8px;
+    padding: 11px 8px;
     font-size: 13px;
     font-weight: bold;
     cursor: pointer;
     touch-action: manipulation;
-  }
-
-  #log-count {
-    margin-bottom: 8px;
-    color: #ccc;
-    font-size: 13px;
   }
 
   #log-output {
     width: 100%;
     min-height: 220px;
     resize: vertical;
-    background: #0d0d0d;
-    color: #d8d8d8;
+    background: #080808;
+    color: #dddddd;
     border: 1px solid #555;
     padding: 10px;
     font-family: monospace;
     font-size: 12px;
     line-height: 1.5;
   }
+
+  .muted {
+    color: #aaaaaa;
+  }
 </style>
 </head>
 <body>
-
-<div id="controls">
-  <button id="start-btn">レバーオン（スタート）</button>
-</div>
-
-<div class="machine">
-  <div class="reel-container">
-    <div class="reel-window reel-left" id="window-left">
-      <div class="reel-strip-wrapper" id="wrap-left">
-        <div class="reel-image"></div>
-        <div class="reel-image"></div>
-      </div>
-      <div class="center-line"></div>
+  <div id="app">
+    <div id="controls">
+      <button id="start-btn">レバーオン（スタート）</button>
     </div>
-    <button class="stop-btn" data-reel="left" disabled>左 停止</button>
-  </div>
 
-  <div class="reel-container">
-    <div class="reel-window reel-center" id="window-center">
-      <div class="reel-strip-wrapper" id="wrap-center">
-        <div class="reel-image"></div>
-        <div class="reel-image"></div>
+    <div class="machine">
+      <div class="reel-container">
+        <div class="reel-window reel-left" id="window-left">
+          <div class="reel-strip-wrapper" id="wrap-left">
+            <div class="reel-image"></div>
+            <div class="reel-image"></div>
+          </div>
+          <div class="center-band"></div>
+        </div>
+        <button class="stop-btn" data-reel="left" disabled>左 停止</button>
       </div>
-      <div class="center-line"></div>
-      <div class="target-line"></div>
-    </div>
-    <button class="stop-btn" data-reel="center" disabled>中 停止</button>
-  </div>
 
-  <div class="reel-container">
-    <div class="reel-window reel-right" id="window-right">
-      <div class="reel-strip-wrapper" id="wrap-right">
-        <div class="reel-image"></div>
-        <div class="reel-image"></div>
+      <div class="reel-container">
+        <div class="reel-window reel-center" id="window-center">
+          <div class="reel-strip-wrapper" id="wrap-center">
+            <div class="reel-image"></div>
+            <div class="reel-image"></div>
+          </div>
+          <div class="center-band"></div>
+          <div class="target-line"></div>
+        </div>
+        <button class="stop-btn" data-reel="center" disabled>中 停止</button>
       </div>
-      <div class="center-line"></div>
+
+      <div class="reel-container">
+        <div class="reel-window reel-right" id="window-right">
+          <div class="reel-strip-wrapper" id="wrap-right">
+            <div class="reel-image"></div>
+            <div class="reel-image"></div>
+          </div>
+          <div class="center-band"></div>
+        </div>
+        <button class="stop-btn" data-reel="right" disabled>右 停止</button>
+      </div>
     </div>
-    <button class="stop-btn" data-reel="right" disabled>右 停止</button>
+
+    <div class="panel">
+      <div class="panel-title">【判定】</div>
+      <div id="judge-label" class="big-result muted">-</div>
+      <div id="judge-detail" class="small-result muted">中リールを止めると表示</div>
+      <div id="reel-view" class="small-result muted">停止後の見え方: -</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">【直近成績】</div>
+      <div id="stats-grid">
+        <div>試行数</div><div id="stat-count">0</div>
+        <div>平均ズレ</div><div id="stat-avg">-</div>
+        <div>PERFECT率</div><div id="stat-perfect-rate">-</div>
+        <div>GOOD以上率</div><div id="stat-good-rate">-</div>
+        <div>早い / 遅い</div><div id="stat-balance">-</div>
+        <div>傾向</div><div id="stat-trend">-</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">【設定】</div>
+      <div class="subtle">
+        目標: 中リール 白7枠下ビタ<br>
+        現在の基準位置: <span class="judge-info">targetPos = 9</span><br>
+        判定は中リール停止時の <span class="judge-warn">押下瞬間の内部位置</span> を使って算出
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">【中リール ログ】</div>
+      <div id="log-count" class="subtle">件数: 0</div>
+      <div id="log-controls">
+        <button id="copy-log-btn">ログをコピー</button>
+        <button id="clear-log-btn">ログを全削除</button>
+      </div>
+      <textarea id="log-output" readonly></textarea>
+    </div>
   </div>
-</div>
-
-<div id="result-board">
-  <div>【結果】</div>
-  <div id="res-left">左: -</div>
-  <div id="res-center">中: -</div>
-  <div id="res-right">右: -</div>
-  <div id="res-main" style="margin-top:8px;">判定: -</div>
-</div>
-
-<div id="target-info">
-  目標: <span class="info">中リール 白7 枠下ビタ</span><br>
-  ログ主軸: <span class="warn">押下瞬間の内部位置(rawPos)と正解位置(targetPos)の差分(delta)</span><br>
-  補助情報: 押下から停止描画までのラグ(displayLagMs)も保存
-</div>
-
-<div id="log-panel">
-  <div>【中リール ログ】</div>
-  <div id="log-count">件数: 0</div>
-  <div id="log-controls">
-    <button id="copy-log-btn">ログをコピー</button>
-    <button id="clear-log-btn">ログを全削除</button>
-  </div>
-  <textarea id="log-output" readonly></textarea>
-</div>
 
 <script>
 (() => {
@@ -242,9 +308,8 @@
   const SYMBOLS_PER_SEC = TOTAL_SYMBOLS / LOOP_TIME_SEC;
   const reels = ['left', 'center', 'right'];
 
-  // 現時点の暫定正解位置（0始まりの上段位置）
-  // 枠内: リプレイ / 星 / 星、枠下: 白7 を狙う位置
-  const TARGET_TOP_POS_CENTER = 11;
+  // 中リール 白7枠下ビタ用の基準位置
+  const TARGET_TOP_POS_CENTER = 9;
 
   const JUDGE_THRESHOLDS = {
     perfect: 0.15,
@@ -252,7 +317,7 @@
     ok: 0.50
   };
 
-  const LOG_STORAGE_KEY = 'discup_ur_center_logs_v1';
+  const LOG_STORAGE_KEY = 'discup_ur_center_logs_v2';
 
   const wrappers = {
     left: document.getElementById('wrap-left'),
@@ -266,18 +331,22 @@
     right: document.getElementById('window-right')
   };
 
-  const results = {
-    left: document.getElementById('res-left'),
-    center: document.getElementById('res-center'),
-    right: document.getElementById('res-right'),
-    main: document.getElementById('res-main')
-  };
-
   const stopButtons = {
     left: document.querySelector('.stop-btn[data-reel="left"]'),
     center: document.querySelector('.stop-btn[data-reel="center"]'),
     right: document.querySelector('.stop-btn[data-reel="right"]')
   };
+
+  const judgeLabelEl = document.getElementById('judge-label');
+  const judgeDetailEl = document.getElementById('judge-detail');
+  const reelViewEl = document.getElementById('reel-view');
+
+  const statCountEl = document.getElementById('stat-count');
+  const statAvgEl = document.getElementById('stat-avg');
+  const statPerfectRateEl = document.getElementById('stat-perfect-rate');
+  const statGoodRateEl = document.getElementById('stat-good-rate');
+  const statBalanceEl = document.getElementById('stat-balance');
+  const statTrendEl = document.getElementById('stat-trend');
 
   const logCountEl = document.getElementById('log-count');
   const logOutputEl = document.getElementById('log-output');
@@ -287,8 +356,8 @@
   const state = {
     currentPos: { left: 0, center: 0, right: 0 },
     isSpinning: { left: false, center: false, right: false },
-    lastTime:   { left: 0, center: 0, right: 0 },
-    animId:     { left: null, center: null, right: null },
+    lastTime: { left: 0, center: 0, right: 0 },
+    animId: { left: null, center: null, right: null },
     trialCount: 0,
     logs: []
   };
@@ -323,42 +392,14 @@
       state.currentPos[reel] = Math.random() * TOTAL_SYMBOLS;
       state.lastTime[reel] = performance.now();
 
-      updateReelDisplay(reel);
       cancelAnimationFrame(state.animId[reel]);
+      updateReelDisplay(reel);
       state.animId[reel] = requestAnimationFrame((t) => animateReel(t, reel));
 
       stopButtons[reel].disabled = false;
-      results[reel].textContent = `${toJP(reel)}: 回転中...`;
     });
 
-    results.main.textContent = '判定: -';
-    results.main.className = '';
-  }
-
-  function getSignedDelta(rawPos, targetPos) {
-    let d = rawPos - targetPos;
-
-    if (d > TOTAL_SYMBOLS / 2) d -= TOTAL_SYMBOLS;
-    if (d < -TOTAL_SYMBOLS / 2) d += TOTAL_SYMBOLS;
-
-    return d;
-  }
-
-  function snapToNearestStop(rawPos) {
-    return mod(Math.round(rawPos), TOTAL_SYMBOLS);
-  }
-
-  function getJudge(absDelta) {
-    if (absDelta <= JUDGE_THRESHOLDS.perfect) {
-      return { label: 'PERFECT', className: 'good' };
-    }
-    if (absDelta <= JUDGE_THRESHOLDS.good) {
-      return { label: 'GOOD', className: 'info' };
-    }
-    if (absDelta <= JUDGE_THRESHOLDS.ok) {
-      return { label: 'OK', className: 'warn' };
-    }
-    return { label: 'MISS', className: 'bad' };
+    resetJudgeDisplay();
   }
 
   function stopReel(reel) {
@@ -378,48 +419,82 @@
     const displayDoneTimeMs = performance.now();
     const displayLagMs = displayDoneTimeMs - tapTimeMs;
 
+    if (reel !== 'center') {
+      return;
+    }
+
+    const targetPos = TARGET_TOP_POS_CENTER;
+    const delta = getSignedDelta(rawPos, targetPos);
+    const absDelta = Math.abs(delta);
+    const direction = delta < 0 ? '早い' : delta > 0 ? '遅い' : 'ビタ';
+    const judge = getJudge(absDelta);
+
     const topSymbol = snappedPos + 1;
     const midSymbol = mod(snappedPos + 1, TOTAL_SYMBOLS) + 1;
     const bottomSymbol = mod(snappedPos + 2, TOTAL_SYMBOLS) + 1;
 
-    if (reel === 'center') {
-      const targetPos = TARGET_TOP_POS_CENTER;
-      const delta = getSignedDelta(rawPos, targetPos);
-      const absDelta = Math.abs(delta);
-      const judge = getJudge(absDelta);
+    updateJudgeDisplay(judge, direction, absDelta, topSymbol, midSymbol, bottomSymbol);
 
-      const direction = delta < 0 ? '早い' : delta > 0 ? '遅い' : 'ビタ';
+    appendCenterLog({
+      trial: ++state.trialCount,
+      tapTimeMs: round3(tapTimeMs),
+      rawPos: round4(rawPos),
+      targetPos: round4(targetPos),
+      delta: round4(delta),
+      direction,
+      judge: judge.label,
+      snapPos: round4(snappedPos),
+      displayLagMs: round3(displayLagMs)
+    });
+  }
 
-      results[reel].textContent =
-        `中: 停止後の見え方 [上:${topSymbol} / 中:${midSymbol} / 下:${bottomSymbol}]`;
+  function resetJudgeDisplay() {
+    judgeLabelEl.textContent = '-';
+    judgeLabelEl.className = 'big-result muted';
+    judgeDetailEl.textContent = '中リールを止めると表示';
+    judgeDetailEl.className = 'small-result muted';
+    reelViewEl.textContent = '停止後の見え方: -';
+    reelViewEl.className = 'small-result muted';
+  }
 
-      results.main.className = judge.className;
-      results.main.textContent =
-        `判定: ${judge.label} | ${direction} | ${absDelta.toFixed(3)}コマズレ`;
+  function updateJudgeDisplay(judge, direction, absDelta, topSymbol, midSymbol, bottomSymbol) {
+    judgeLabelEl.textContent = judge.label;
+    judgeLabelEl.className = `big-result ${judge.className}`;
+    judgeDetailEl.textContent = `${direction} | ${absDelta.toFixed(3)}コマズレ`;
+    judgeDetailEl.className = `small-result ${judge.className}`;
+    reelViewEl.textContent = `停止後の見え方: [上:${topSymbol} / 中:${midSymbol} / 下:${bottomSymbol}]`;
+    reelViewEl.className = 'small-result';
+  }
 
-      appendCenterLog({
-        trial: ++state.trialCount,
-        tapTimeMs: round3(tapTimeMs),
-        rawPos: round4(rawPos),
-        targetPos: round4(targetPos),
-        delta: round4(delta),
-        direction,
-        judge: judge.label,
-        snapPos: round4(snappedPos),
-        displayLagMs: round3(displayLagMs)
-      });
+  function getSignedDelta(rawPos, targetPos) {
+    let d = rawPos - targetPos;
+    if (d > TOTAL_SYMBOLS / 2) d -= TOTAL_SYMBOLS;
+    if (d < -TOTAL_SYMBOLS / 2) d += TOTAL_SYMBOLS;
+    return d;
+  }
 
-      return;
+  function snapToNearestStop(rawPos) {
+    return mod(Math.round(rawPos), TOTAL_SYMBOLS);
+  }
+
+  function getJudge(absDelta) {
+    if (absDelta <= JUDGE_THRESHOLDS.perfect) {
+      return { label: 'PERFECT', className: 'judge-good' };
     }
-
-    results[reel].textContent =
-      `${toJP(reel)}: 停止後の見え方 [上:${topSymbol} / 中:${midSymbol} / 下:${bottomSymbol}]`;
+    if (absDelta <= JUDGE_THRESHOLDS.good) {
+      return { label: 'GOOD', className: 'judge-info' };
+    }
+    if (absDelta <= JUDGE_THRESHOLDS.ok) {
+      return { label: 'OK', className: 'judge-warn' };
+    }
+    return { label: 'MISS', className: 'judge-bad' };
   }
 
   function appendCenterLog(entry) {
     state.logs.push(entry);
     saveLogs();
     renderLogs();
+    renderStats();
   }
 
   function renderLogs() {
@@ -445,6 +520,54 @@
     logOutputEl.value = lines.join('\n');
   }
 
+  function renderStats() {
+    const logs = state.logs;
+    const count = logs.length;
+
+    statCountEl.textContent = String(count);
+
+    if (count === 0) {
+      statAvgEl.textContent = '-';
+      statPerfectRateEl.textContent = '-';
+      statGoodRateEl.textContent = '-';
+      statBalanceEl.textContent = '-';
+      statTrendEl.textContent = '-';
+      statTrendEl.className = '';
+      return;
+    }
+
+    const avgDelta = logs.reduce((sum, row) => sum + Number(row.delta), 0) / count;
+    const perfectCount = logs.filter(row => row.judge === 'PERFECT').length;
+    const goodOrBetterCount = logs.filter(row => row.judge === 'PERFECT' || row.judge === 'GOOD').length;
+    const earlyCount = logs.filter(row => row.direction === '早い').length;
+    const lateCount = logs.filter(row => row.direction === '遅い').length;
+
+    statAvgEl.textContent = `${formatSigned(avgDelta)}コマ`;
+    statPerfectRateEl.textContent = `${((perfectCount / count) * 100).toFixed(1)}%`;
+    statGoodRateEl.textContent = `${((goodOrBetterCount / count) * 100).toFixed(1)}%`;
+    statBalanceEl.textContent = `${earlyCount} / ${lateCount}`;
+
+    const trend = getTrendText(avgDelta);
+    statTrendEl.textContent = trend.text;
+    statTrendEl.className = trend.className;
+  }
+
+  function getTrendText(avgDelta) {
+    if (avgDelta <= -0.30) {
+      return { text: 'かなり早め', className: 'judge-bad' };
+    }
+    if (avgDelta < -0.10) {
+      return { text: 'やや早め', className: 'judge-warn' };
+    }
+    if (avgDelta < 0.10) {
+      return { text: 'ほぼ中央', className: 'judge-good' };
+    }
+    if (avgDelta < 0.30) {
+      return { text: 'やや遅め', className: 'judge-warn' };
+    }
+    return { text: 'かなり遅め', className: 'judge-bad' };
+  }
+
   function saveLogs() {
     localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(state.logs));
   }
@@ -453,16 +576,14 @@
     try {
       const raw = localStorage.getItem(LOG_STORAGE_KEY);
       if (!raw) return;
+
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return;
 
       state.logs = parsed;
-      const maxTrial = parsed.reduce((max, row) => {
-        return Math.max(max, Number(row.trial) || 0);
-      }, 0);
-      state.trialCount = maxTrial;
-    } catch (err) {
-      console.error('ログ読込失敗', err);
+      state.trialCount = parsed.reduce((max, row) => Math.max(max, Number(row.trial) || 0), 0);
+    } catch (error) {
+      console.error('ログ読込失敗', error);
       state.logs = [];
       state.trialCount = 0;
     }
@@ -478,7 +599,7 @@
       setTimeout(() => {
         copyLogBtn.textContent = 'ログをコピー';
       }, 1200);
-    } catch (err) {
+    } catch (error) {
       copyLogBtn.textContent = 'コピー失敗';
       setTimeout(() => {
         copyLogBtn.textContent = 'ログをコピー';
@@ -491,16 +612,17 @@
     state.trialCount = 0;
     saveLogs();
     renderLogs();
+    renderStats();
+    resetJudgeDisplay();
   }
 
   function refreshAllDisplays() {
     reels.forEach(updateReelDisplay);
   }
 
-  function toJP(reel) {
-    if (reel === 'left') return '左';
-    if (reel === 'center') return '中';
-    return '右';
+  function formatSigned(value) {
+    const rounded = value.toFixed(3);
+    return value > 0 ? `+${rounded}` : rounded;
   }
 
   function mod(n, m) {
@@ -530,9 +652,10 @@
 
   loadLogs();
   renderLogs();
+  renderStats();
+  resetJudgeDisplay();
   refreshAllDisplays();
 })();
 </script>
-
 </body>
 </html>
