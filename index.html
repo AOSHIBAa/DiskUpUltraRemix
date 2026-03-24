@@ -68,8 +68,9 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: calc(100% * 40 / 3); /* 20コマ × 2枚 */
-    will-change: transform;
+    height: calc(100% * 40 / 3);
+    will-change: transform, filter;
+    filter: blur(0px);
   }
 
   .reel-image {
@@ -91,29 +92,6 @@
 
   .reel-right .reel-image {
     background-position-x: 100%;
-  }
-
-  .center-band {
-    position: absolute;
-    top: 33.333333%;
-    left: 0;
-    width: 100%;
-    height: 33.333333%;
-    background: rgba(255, 0, 0, 0.18);
-    pointer-events: none;
-    z-index: 10;
-  }
-
-  .target-line {
-    position: absolute;
-    top: 66.666666%;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: rgba(0, 255, 255, 0.95);
-    box-shadow: 0 0 6px rgba(0, 255, 255, 0.9);
-    pointer-events: none;
-    z-index: 11;
   }
 
   .stop-btn {
@@ -231,7 +209,6 @@
             <div class="reel-image"></div>
             <div class="reel-image"></div>
           </div>
-          <div class="center-band"></div>
         </div>
         <button class="stop-btn" data-reel="left" disabled>左 停止</button>
       </div>
@@ -242,8 +219,6 @@
             <div class="reel-image"></div>
             <div class="reel-image"></div>
           </div>
-          <div class="center-band"></div>
-          <div class="target-line"></div>
         </div>
         <button class="stop-btn" data-reel="center" disabled>中 停止</button>
       </div>
@@ -254,7 +229,6 @@
             <div class="reel-image"></div>
             <div class="reel-image"></div>
           </div>
-          <div class="center-band"></div>
         </div>
         <button class="stop-btn" data-reel="right" disabled>右 停止</button>
       </div>
@@ -282,9 +256,9 @@
     <div class="panel">
       <div class="panel-title">【設定】</div>
       <div class="subtle">
-        目標: 中リール 白7枠下ビタ<br>
-        現在の基準位置: <span class="judge-info">targetPos = 9</span><br>
-        判定は中リール停止時の <span class="judge-warn">押下瞬間の内部位置</span> を使って算出
+        現在課題: <span id="task-name" class="judge-info">中リール 白7枠下ビタ</span><br>
+        基準位置: <span id="task-target" class="judge-info">9</span><br>
+        判定は中リール停止時の <span class="judge-warn">押下瞬間の内部位置</span> を使用
       </div>
     </div>
 
@@ -308,8 +282,17 @@
   const SYMBOLS_PER_SEC = TOTAL_SYMBOLS / LOOP_TIME_SEC;
   const reels = ['left', 'center', 'right'];
 
-  // 中リール 白7枠下ビタ用の基準位置
-  const TARGET_TOP_POS_CENTER = 9;
+  // 将来拡張用の課題定義
+  const TASKS = {
+    center_white7_shitabi: {
+      id: 'center_white7_shitabi',
+      name: '中リール 白7枠下ビタ',
+      reel: 'center',
+      targetPos: 9
+    }
+  };
+
+  let currentTask = TASKS.center_white7_shitabi;
 
   const JUDGE_THRESHOLDS = {
     perfect: 0.15,
@@ -317,7 +300,12 @@
     ok: 0.50
   };
 
-  const LOG_STORAGE_KEY = 'discup_ur_center_logs_v2';
+  const VISUALS = {
+    spinBlurPx: 0.55,           // 回転中の弱ブラー
+    stopSettleDurationMs: 80    // 停止整列アニメーション
+  };
+
+  const LOG_STORAGE_KEY = 'discup_ur_center_logs_v3';
 
   const wrappers = {
     left: document.getElementById('wrap-left'),
@@ -353,17 +341,31 @@
   const copyLogBtn = document.getElementById('copy-log-btn');
   const clearLogBtn = document.getElementById('clear-log-btn');
 
+  const taskNameEl = document.getElementById('task-name');
+  const taskTargetEl = document.getElementById('task-target');
+
   const state = {
     currentPos: { left: 0, center: 0, right: 0 },
     isSpinning: { left: false, center: false, right: false },
+    isSettling: { left: false, center: false, right: false },
     lastTime: { left: 0, center: 0, right: 0 },
     animId: { left: null, center: null, right: null },
+    settleAnimId: { left: null, center: null, right: null },
     trialCount: 0,
     logs: []
   };
 
+  function initTaskDisplay() {
+    taskNameEl.textContent = currentTask.name;
+    taskTargetEl.textContent = String(currentTask.targetPos);
+  }
+
   function getSymbolHeightPx(reel) {
     return windows[reel].clientHeight / 3;
+  }
+
+  function setWrapperBlur(reel, enabled) {
+    wrappers[reel].style.filter = enabled ? `blur(${VISUALS.spinBlurPx}px)` : 'blur(0px)';
   }
 
   function updateReelDisplay(reel) {
@@ -388,11 +390,15 @@
 
   function startAllReels() {
     reels.forEach((reel) => {
+      cancelAnimationFrame(state.animId[reel]);
+      cancelAnimationFrame(state.settleAnimId[reel]);
+
       state.isSpinning[reel] = true;
+      state.isSettling[reel] = false;
       state.currentPos[reel] = Math.random() * TOTAL_SYMBOLS;
       state.lastTime[reel] = performance.now();
 
-      cancelAnimationFrame(state.animId[reel]);
+      setWrapperBlur(reel, true);
       updateReelDisplay(reel);
       state.animId[reel] = requestAnimationFrame((t) => animateReel(t, reel));
 
@@ -403,49 +409,86 @@
   }
 
   function stopReel(reel) {
-    if (!state.isSpinning[reel]) return;
+    if (!state.isSpinning[reel] || state.isSettling[reel]) return;
 
     const tapTimeMs = performance.now();
     const rawPos = state.currentPos[reel];
 
     state.isSpinning[reel] = false;
+    state.isSettling[reel] = true;
     cancelAnimationFrame(state.animId[reel]);
     stopButtons[reel].disabled = true;
 
-    const snappedPos = snapToNearestStop(rawPos);
-    state.currentPos[reel] = snappedPos;
-    updateReelDisplay(reel);
+    const settleTargetPos = getForwardSnapStop(rawPos);
 
-    const displayDoneTimeMs = performance.now();
-    const displayLagMs = displayDoneTimeMs - tapTimeMs;
+    settleToStop(reel, rawPos, settleTargetPos, () => {
+      const displayDoneTimeMs = performance.now();
+      const displayLagMs = displayDoneTimeMs - tapTimeMs;
 
-    if (reel !== 'center') {
-      return;
+      if (reel === currentTask.reel) {
+        const targetPos = currentTask.targetPos;
+        const delta = getSignedDelta(rawPos, targetPos);
+        const absDelta = Math.abs(delta);
+        const direction = delta < 0 ? '早い' : delta > 0 ? '遅い' : 'ビタ';
+        const judge = getJudge(absDelta);
+
+        const topSymbol = settleTargetPos + 1;
+        const midSymbol = mod(settleTargetPos + 1, TOTAL_SYMBOLS) + 1;
+        const bottomSymbol = mod(settleTargetPos + 2, TOTAL_SYMBOLS) + 1;
+
+        updateJudgeDisplay(judge, direction, absDelta, topSymbol, midSymbol, bottomSymbol);
+
+        appendCenterLog({
+          trial: ++state.trialCount,
+          tapTimeMs: round3(tapTimeMs),
+          rawPos: round4(rawPos),
+          targetPos: round4(targetPos),
+          delta: round4(delta),
+          direction,
+          judge: judge.label,
+          snapPos: round4(settleTargetPos),
+          displayLagMs: round3(displayLagMs)
+        });
+      }
+    });
+  }
+
+  function settleToStop(reel, fromPos, toPos, onDone) {
+    const startTime = performance.now();
+    const duration = VISUALS.stopSettleDurationMs;
+    const travel = getForwardDistance(fromPos, toPos);
+
+    function tick(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = easeOutCubic(t);
+
+      state.currentPos[reel] = mod(fromPos + travel * eased, TOTAL_SYMBOLS);
+      updateReelDisplay(reel);
+
+      if (t < 1) {
+        state.settleAnimId[reel] = requestAnimationFrame(tick);
+        return;
+      }
+
+      state.currentPos[reel] = mod(toPos, TOTAL_SYMBOLS);
+      state.isSettling[reel] = false;
+      setWrapperBlur(reel, false);
+      updateReelDisplay(reel);
+
+      if (typeof onDone === 'function') onDone();
     }
 
-    const targetPos = TARGET_TOP_POS_CENTER;
-    const delta = getSignedDelta(rawPos, targetPos);
-    const absDelta = Math.abs(delta);
-    const direction = delta < 0 ? '早い' : delta > 0 ? '遅い' : 'ビタ';
-    const judge = getJudge(absDelta);
+    state.settleAnimId[reel] = requestAnimationFrame(tick);
+  }
 
-    const topSymbol = snappedPos + 1;
-    const midSymbol = mod(snappedPos + 1, TOTAL_SYMBOLS) + 1;
-    const bottomSymbol = mod(snappedPos + 2, TOTAL_SYMBOLS) + 1;
+  function getForwardSnapStop(rawPos) {
+    // 回転方向にだけ進んで整列させる
+    return mod(Math.ceil(rawPos - 1e-9), TOTAL_SYMBOLS);
+  }
 
-    updateJudgeDisplay(judge, direction, absDelta, topSymbol, midSymbol, bottomSymbol);
-
-    appendCenterLog({
-      trial: ++state.trialCount,
-      tapTimeMs: round3(tapTimeMs),
-      rawPos: round4(rawPos),
-      targetPos: round4(targetPos),
-      delta: round4(delta),
-      direction,
-      judge: judge.label,
-      snapPos: round4(snappedPos),
-      displayLagMs: round3(displayLagMs)
-    });
+  function getForwardDistance(fromPos, toPos) {
+    return mod(toPos - fromPos, TOTAL_SYMBOLS);
   }
 
   function resetJudgeDisplay() {
@@ -471,10 +514,6 @@
     if (d > TOTAL_SYMBOLS / 2) d -= TOTAL_SYMBOLS;
     if (d < -TOTAL_SYMBOLS / 2) d += TOTAL_SYMBOLS;
     return d;
-  }
-
-  function snapToNearestStop(rawPos) {
-    return mod(Math.round(rawPos), TOTAL_SYMBOLS);
   }
 
   function getJudge(absDelta) {
@@ -620,6 +659,10 @@
     reels.forEach(updateReelDisplay);
   }
 
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
   function formatSigned(value) {
     const rounded = value.toFixed(3);
     return value > 0 ? `+${rounded}` : rounded;
@@ -650,6 +693,7 @@
   clearLogBtn.addEventListener('click', clearLogs);
   window.addEventListener('resize', refreshAllDisplays);
 
+  initTaskDisplay();
   loadLogs();
   renderLogs();
   renderStats();
