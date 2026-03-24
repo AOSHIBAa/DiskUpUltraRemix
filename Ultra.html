@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ディスクアップUR ビタ押し練習（ログ取得版）</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #222;
+    color: #fff;
+    font-family: sans-serif;
+    text-align: center;
+  }
+
+  #controls {
+    margin: 18px 0 14px;
+  }
+
+  #start-btn {
+    padding: 14px 34px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .machine {
+    display: flex;
+    justify-content: center;
+    gap: 2%;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto 16px;
+    padding: 0 14px;
+  }
+
+  .reel-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .reel-window {
+    width: 100%;
+    aspect-ratio: 7 / 10;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #ffcc00;
+    background: #fff;
+  }
+
+  .reel-strip-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% * 40 / 3);
+    will-change: transform;
+  }
+
+  .reel-image {
+    width: 100%;
+    height: 50%;
+    background-image: url('http://ao11119999.web.fc2.com/img/IMG_20260324_191214.jpg');
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    background-position-y: 0%;
+  }
+
+  .reel-left .reel-image   { background-position-x: 0%; }
+  .reel-center .reel-image { background-position-x: 50%; }
+  .reel-right .reel-image  { background-position-x: 100%; }
+
+  .center-line {
+    position: absolute;
+    top: 33.333333%;
+    left: 0;
+    width: 100%;
+    height: 33.333333%;
+    background: rgba(255, 0, 0, 0.18);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .target-line {
+    position: absolute;
+    top: 66.666666%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(0, 255, 255, 0.95);
+    box-shadow: 0 0 6px rgba(0,255,255,0.9);
+    pointer-events: none;
+    z-index: 11;
+  }
+
+  .stop-btn {
+    width: 100%;
+    padding: 12px 0;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  #result-board, #target-info, #log-panel {
+    width: 92%;
+    max-width: 520px;
+    margin: 0 auto 12px;
+    padding: 12px;
+    background: #111;
+    border: 1px solid #444;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  #target-info {
+    background: #1a1a1a;
+    border-color: #3a3a3a;
+    font-size: 13px;
+    color: #ddd;
+  }
+
+  .good { color: #7dff98; font-weight: bold; }
+  .warn { color: #ffd36b; font-weight: bold; }
+  .bad  { color: #ff8f8f; font-weight: bold; }
+  .info { color: #7fe7ff; font-weight: bold; }
+
+  #log-controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0 12px;
+  }
+
+  #log-controls button {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  #log-count {
+    margin-bottom: 8px;
+    color: #ccc;
+    font-size: 13px;
+  }
+
+  #log-output {
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    background: #0d0d0d;
+    color: #d8d8d8;
+    border: 1px solid #555;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <button id="start-btn">レバーオン（スタート）</button>
+</div>
+
+<div class="machine">
+  <div class="reel-container">
+    <div class="reel-window reel-left" id="window-left">
+      <div class="reel-strip-wrapper" id="wrap-left">
+        <div class="reel-image"></div>
+        <div class="reel-image"></div>
+      </div>
+      <div class="center-line"></div>
+    </div>
+    <button class="stop-btn" data-reel="left" disabled>左 停止</button>
+  </div>
+
+  <div class="reel-container">
+    <div class="reel-window reel-center" id="window-center">
+      <div class="reel-strip-wrapper" id="wrap-center">
+        <div class="reel-image"></div>
+        <div class="reel-image"></div>
+      </div>
+      <div class="center-line"></div>
+      <div class="target-line"></div>
+    </div>
+    <button class="stop-btn" data-reel="center" disabled>中 停止</button>
+  </div>
+
+  <div class="reel-container">
+    <div class="reel-window reel-right" id="window-right">
+      <div class="reel-strip-wrapper" id="wrap-right">
+        <div class="reel-image"></div>
+        <div class="reel-image"></div>
+      </div>
+      <div class="center-line"></div>
+    </div>
+    <button class="stop-btn" data-reel="right" disabled>右 停止</button>
+  </div>
+</div>
+
+<div id="result-board">
+  <div>【結果】</div>
+  <div id="res-left">左: -</div>
+  <div id="res-center">中: -</div>
+  <div id="res-right">右: -</div>
+  <div id="res-main" style="margin-top:8px;">判定: -</div>
+</div>
+
+<div id="target-info">
+  目標: <span class="info">中リール 白7 枠下ビタ</span><br>
+  ログ主軸: <span class="warn">押下瞬間の内部位置(rawPos)と正解位置(targetPos)の差分(delta)</span><br>
+  補助情報: 押下から停止描画までのラグ(displayLagMs)も保存
+</div>
+
+<div id="log-panel">
+  <div>【中リール ログ】</div>
+  <div id="log-count">件数: 0</div>
+  <div id="log-controls">
+    <button id="copy-log-btn">ログをコピー</button>
+    <button id="clear-log-btn">ログを全削除</button>
+  </div>
+  <textarea id="log-output" readonly></textarea>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const TOTAL_SYMBOLS = 20;
+  const LOOP_TIME_SEC = 0.78;
+  const SYMBOLS_PER_SEC = TOTAL_SYMBOLS / LOOP_TIME_SEC;
+  const reels = ['left', 'center', 'right'];
+
+  // 現時点の暫定正解位置（0始まりの上段位置）
+  // 枠内: リプレイ / 星 / 星、枠下: 白7 を狙う位置
+  const TARGET_TOP_POS_CENTER = 11;
+
+  const JUDGE_THRESHOLDS = {
+    perfect: 0.15,
+    good: 0.30,
+    ok: 0.50
+  };
+
+  const LOG_STORAGE_KEY = 'discup_ur_center_logs_v1';
+
+  const wrappers = {
+    left: document.getElementById('wrap-left'),
+    center: document.getElementById('wrap-center'),
+    right: document.getElementById('wrap-right')
+  };
+
+  const windows = {
+    left: document.getElementById('window-left'),
+    center: document.getElementById('window-center'),
+    right: document.getElementById('window-right')
+  };
+
+  const results = {
+    left: document.getElementById('res-left'),
+    center: document.getElementById('res-center'),
+    right: document.getElementById('res-right'),
+    main: document.getElementById('res-main')
+  };
+
+  const stopButtons = {
+    left: document.querySelector('.stop-btn[data-reel="left"]'),
+    center: document.querySelector('.stop-btn[data-reel="center"]'),
+    right: document.querySelector('.stop-btn[data-reel="right"]')
+  };
+
+  const logCountEl = document.getElementById('log-count');
+  const logOutputEl = document.getElementById('log-output');
+  const copyLogBtn = document.getElementById('copy-log-btn');
+  const clearLogBtn = document.getElementById('clear-log-btn');
+
+  const state = {
+    currentPos: { left: 0, center: 0, right: 0 },
+    isSpinning: { left: false, center: false, right: false },
+    lastTime:   { left: 0, center: 0, right: 0 },
+    animId:     { left: null, center: null, right: null },
+    trialCount: 0,
+    logs: []
+  };
+
+  function getSymbolHeightPx(reel) {
+    return windows[reel].clientHeight / 3;
+  }
+
+  function updateReelDisplay(reel) {
+    const symbolHeight = getSymbolHeightPx(reel);
+    const baseOffset = -TOTAL_SYMBOLS * symbolHeight;
+    const y = baseOffset + state.currentPos[reel] * symbolHeight;
+    wrappers[reel].style.transform = `translateY(${y}px)`;
+  }
+
+  function animateReel(now, reel) {
+    if (!state.isSpinning[reel]) return;
+
+    const deltaSec = (now - state.lastTime[reel]) / 1000;
+    state.lastTime[reel] = now;
+
+    state.currentPos[reel] += SYMBOLS_PER_SEC * deltaSec;
+    state.currentPos[reel] %= TOTAL_SYMBOLS;
+
+    updateReelDisplay(reel);
+    state.animId[reel] = requestAnimationFrame((t) => animateReel(t, reel));
+  }
+
+  function startAllReels() {
+    reels.forEach((reel) => {
+      state.isSpinning[reel] = true;
+      state.currentPos[reel] = Math.random() * TOTAL_SYMBOLS;
+      state.lastTime[reel] = performance.now();
+
+      updateReelDisplay(reel);
+      cancelAnimationFrame(state.animId[reel]);
+      state.animId[reel] = requestAnimationFrame((t) => animateReel(t, reel));
+
+      stopButtons[reel].disabled = false;
+      results[reel].textContent = `${toJP(reel)}: 回転中...`;
+    });
+
+    results.main.textContent = '判定: -';
+    results.main.className = '';
+  }
+
+  function getSignedDelta(rawPos, targetPos) {
+    let d = rawPos - targetPos;
+
+    if (d > TOTAL_SYMBOLS / 2) d -= TOTAL_SYMBOLS;
+    if (d < -TOTAL_SYMBOLS / 2) d += TOTAL_SYMBOLS;
+
+    return d;
+  }
+
+  function snapToNearestStop(rawPos) {
+    return mod(Math.round(rawPos), TOTAL_SYMBOLS);
+  }
+
+  function getJudge(absDelta) {
+    if (absDelta <= JUDGE_THRESHOLDS.perfect) {
+      return { label: 'PERFECT', className: 'good' };
+    }
+    if (absDelta <= JUDGE_THRESHOLDS.good) {
+      return { label: 'GOOD', className: 'info' };
+    }
+    if (absDelta <= JUDGE_THRESHOLDS.ok) {
+      return { label: 'OK', className: 'warn' };
+    }
+    return { label: 'MISS', className: 'bad' };
+  }
+
+  function stopReel(reel) {
+    if (!state.isSpinning[reel]) return;
+
+    const tapTimeMs = performance.now();
+    const rawPos = state.currentPos[reel];
+
+    state.isSpinning[reel] = false;
+    cancelAnimationFrame(state.animId[reel]);
+    stopButtons[reel].disabled = true;
+
+    const snappedPos = snapToNearestStop(rawPos);
+    state.currentPos[reel] = snappedPos;
+    updateReelDisplay(reel);
+
+    const displayDoneTimeMs = performance.now();
+    const displayLagMs = displayDoneTimeMs - tapTimeMs;
+
+    const topSymbol = snappedPos + 1;
+    const midSymbol = mod(snappedPos + 1, TOTAL_SYMBOLS) + 1;
+    const bottomSymbol = mod(snappedPos + 2, TOTAL_SYMBOLS) + 1;
+
+    if (reel === 'center') {
+      const targetPos = TARGET_TOP_POS_CENTER;
+      const delta = getSignedDelta(rawPos, targetPos);
+      const absDelta = Math.abs(delta);
+      const judge = getJudge(absDelta);
+
+      const direction = delta < 0 ? '早い' : delta > 0 ? '遅い' : 'ビタ';
+
+      results[reel].textContent =
+        `中: 停止後の見え方 [上:${topSymbol} / 中:${midSymbol} / 下:${bottomSymbol}]`;
+
+      results.main.className = judge.className;
+      results.main.textContent =
+        `判定: ${judge.label} | ${direction} | ${absDelta.toFixed(3)}コマズレ`;
+
+      appendCenterLog({
+        trial: ++state.trialCount,
+        tapTimeMs: round3(tapTimeMs),
+        rawPos: round4(rawPos),
+        targetPos: round4(targetPos),
+        delta: round4(delta),
+        direction,
+        judge: judge.label,
+        snapPos: round4(snappedPos),
+        displayLagMs: round3(displayLagMs)
+      });
+
+      return;
+    }
+
+    results[reel].textContent =
+      `${toJP(reel)}: 停止後の見え方 [上:${topSymbol} / 中:${midSymbol} / 下:${bottomSymbol}]`;
+  }
+
+  function appendCenterLog(entry) {
+    state.logs.push(entry);
+    saveLogs();
+    renderLogs();
+  }
+
+  function renderLogs() {
+    logCountEl.textContent = `件数: ${state.logs.length}`;
+
+    const lines = [];
+    lines.push('trial,tapTimeMs,rawPos,targetPos,delta,direction,judge,snapPos,displayLagMs');
+
+    for (const log of state.logs) {
+      lines.push([
+        log.trial,
+        log.tapTimeMs,
+        log.rawPos,
+        log.targetPos,
+        log.delta,
+        log.direction,
+        log.judge,
+        log.snapPos,
+        log.displayLagMs
+      ].join(','));
+    }
+
+    logOutputEl.value = lines.join('\n');
+  }
+
+  function saveLogs() {
+    localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(state.logs));
+  }
+
+  function loadLogs() {
+    try {
+      const raw = localStorage.getItem(LOG_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+
+      state.logs = parsed;
+      const maxTrial = parsed.reduce((max, row) => {
+        return Math.max(max, Number(row.trial) || 0);
+      }, 0);
+      state.trialCount = maxTrial;
+    } catch (err) {
+      console.error('ログ読込失敗', err);
+      state.logs = [];
+      state.trialCount = 0;
+    }
+  }
+
+  async function copyLogs() {
+    const text = logOutputEl.value;
+    if (!text.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      copyLogBtn.textContent = 'コピー完了';
+      setTimeout(() => {
+        copyLogBtn.textContent = 'ログをコピー';
+      }, 1200);
+    } catch (err) {
+      copyLogBtn.textContent = 'コピー失敗';
+      setTimeout(() => {
+        copyLogBtn.textContent = 'ログをコピー';
+      }, 1200);
+    }
+  }
+
+  function clearLogs() {
+    state.logs = [];
+    state.trialCount = 0;
+    saveLogs();
+    renderLogs();
+  }
+
+  function refreshAllDisplays() {
+    reels.forEach(updateReelDisplay);
+  }
+
+  function toJP(reel) {
+    if (reel === 'left') return '左';
+    if (reel === 'center') return '中';
+    return '右';
+  }
+
+  function mod(n, m) {
+    return ((n % m) + m) % m;
+  }
+
+  function round3(n) {
+    return Number(n.toFixed(3));
+  }
+
+  function round4(n) {
+    return Number(n.toFixed(4));
+  }
+
+  document.getElementById('start-btn').addEventListener('click', startAllReels);
+
+  document.querySelectorAll('.stop-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const reel = e.currentTarget.dataset.reel;
+      stopReel(reel);
+    });
+  });
+
+  copyLogBtn.addEventListener('click', copyLogs);
+  clearLogBtn.addEventListener('click', clearLogs);
+  window.addEventListener('resize', refreshAllDisplays);
+
+  loadLogs();
+  renderLogs();
+  refreshAllDisplays();
+})();
+</script>
+
+</body>
+</html>
