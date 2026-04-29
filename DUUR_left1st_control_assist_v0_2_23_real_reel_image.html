@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DUUR 左1st 制御アシスト 試作版 v0.2.23</title>
+<style>
+:root {
+  --bg:#140913; --panel:#211020; --line:#ff28d7; --line2:#8dfcff; --text:#f7eaff; --muted:#bfa9c4;
+  --hot:#ffd84a; --ok:#70ffb1; --shadow:0 12px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:radial-gradient(circle at 20% 0%,rgba(255,40,215,.22),transparent 32%),radial-gradient(circle at 90% 20%,rgba(141,252,255,.14),transparent 30%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+.app{width:min(980px,100%);margin:0 auto;padding:14px 12px 34px}
+.header{border:2px solid var(--line);border-radius:18px;padding:14px;background:rgba(20,9,19,.72);box-shadow:0 0 22px rgba(255,40,215,.22);position:sticky;top:0;z-index:20;backdrop-filter:blur(10px)}
+.header h1{margin:0;font-size:20px;line-height:1.2}.header p{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.grid{display:grid;gap:12px;margin-top:12px}@media(min-width:760px){.grid{grid-template-columns:360px 1fr;align-items:start}}
+.card,.resultCard{background:linear-gradient(180deg,rgba(44,20,43,.96),rgba(24,12,23,.96));border:1px solid rgba(255,40,215,.35);border-radius:18px;box-shadow:var(--shadow);padding:12px}
+h2,h3{margin:0 0 10px;font-size:15px;color:#fff}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+button,select{width:100%;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:11px 10px;background:#10070f;color:var(--text);font-size:15px}
+button{cursor:pointer;font-weight:900;background:linear-gradient(135deg,rgba(255,40,215,.72),rgba(117,39,255,.55));border-color:rgba(255,40,215,.8);touch-action:manipulation;transition:transform .08s ease,filter .08s ease,box-shadow .08s ease}
+button:active{transform:scale(.96);filter:brightness(1.25);box-shadow:0 0 16px rgba(255,40,215,.5)}
+button.secondary{background:#120812;border-color:rgba(141,252,255,.35);color:#d9fbff}
+button.limitStop{opacity:.38;filter:saturate(.45);box-shadow:none;}
+button.tab{background:#160a15;color:var(--muted);font-size:13px}button.tab.active{color:#fff;background:linear-gradient(135deg,rgba(255,40,215,.45),rgba(141,252,255,.14));box-shadow:0 0 16px rgba(255,40,215,.2)}
+.form{display:grid;gap:10px;margin-top:12px}label{display:grid;gap:5px;font-size:12px;color:var(--muted);font-weight:700}.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modePanel{display:none}.modePanel.active{display:block}
+.dualReelCompare{display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;align-items:center;margin-top:10px}
+.compareArrow{text-align:center;color:var(--line2);font-size:24px;font-weight:1000}
+.miniReelPanel{display:grid;gap:6px}.miniReelTitle{text-align:center;font-size:12px;color:var(--muted);font-weight:900}
+.miniReelControls{display:grid;grid-template-columns:1fr 1fr;gap:6px}.miniReelControls button{padding:8px 4px;font-size:13px}
+.miniReelWindow{height:174px;overflow:hidden;border:2px solid rgba(255,40,215,.74);border-radius:14px;background:#dce7ed;position:relative;box-shadow:inset 0 0 0 2px rgba(0,0,0,.12)}
+.miniReelWindow::after{content:"";position:absolute;left:0;right:0;bottom:0;height:58px;border-top:2px solid rgba(255,40,215,.95);background:linear-gradient(90deg,rgba(255,40,215,.12),rgba(141,252,255,.08));pointer-events:none}
+.miniReelRow{height:58px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(0,0,0,.12);color:#111}
+.symbol{height:auto;display:flex;align-items:center;justify-content:center;color:#111;font-weight:1000;user-select:none}
+.badge{width:56px;min-height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;border:2px solid rgba(0,0,0,.2);box-shadow:0 3px 0 rgba(0,0,0,.22);font-size:13px;line-height:1;transform:scale(.82)}
+.sym-watermelon .badge{background:#69e37c;color:#052d10}.sym-cherry .badge{background:#ff497d;color:#fff}.sym-star .badge{background:#ffdf37;color:#412b00;font-size:22px;clip-path:polygon(50% 0%,61% 30%,95% 31%,68% 51%,79% 84%,50% 64%,21% 84%,32% 51%,5% 31%,39% 30%);width:62px;height:62px;border:0;box-shadow:none}
+.sym-red7 .badge{background:#e81830;color:#fff;font-size:24px;transform:scale(.82) skew(-8deg)}.sym-replay .badge{background:#47c9ff;color:#00324a;border-radius:50%;width:58px;height:44px}.sym-white7 .badge{background:#fff;color:#1b9dff;border-color:#93dfff}.sym-blackbar .badge{background:#050505;color:#33f0ff;border-color:#0cf}
+.stopHint{text-align:center;font-size:12px;color:var(--line2);font-weight:900;min-height:16px}
+.small{font-size:11px;color:var(--muted);line-height:1.55}.result{display:grid;gap:10px}.pills{display:flex;flex-wrap:wrap;gap:6px}.pill{display:inline-flex;align-items:center;gap:4px;padding:6px 8px;border-radius:999px;background:#281326;border:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:800}.pill.hot{border-color:rgba(255,216,74,.75);color:#ffe987;background:rgba(255,216,74,.12)}.pill.ok{border-color:rgba(112,255,177,.7);color:#b8ffd6;background:rgba(112,255,177,.1)}
+.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{border-bottom:1px solid rgba(255,255,255,.08);padding:7px 6px;text-align:left;vertical-align:top}.table th{color:#d5faff;background:rgba(141,252,255,.08)}
+.notice{border-left:4px solid var(--hot);background:rgba(255,216,74,.09);color:#ffeeb0;padding:10px;border-radius:12px;font-size:12px;line-height:1.55}.hidden{display:none!important}
+.footerNote{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.55}
+@media(max-width:380px){.dualReelCompare{grid-template-columns:1fr 20px 1fr;gap:5px}.badge{transform:scale(.74)}.sym-red7 .badge{transform:scale(.74) skew(-8deg)}}
+.miniReelRow{{height:58px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(0,0,0,.12);color:#111}}
+to{{opacity:1;transform:translateY(0)}}}}
+
+/* v0.2.10 smooth independent reel animation */
+.miniReelWindow {
+  contain: content;
+}
+.miniReelRow {
+  overflow:hidden;
+}
+.reelSlideWrap {
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:1;
+  transform:translateY(0) scale(1);
+  will-change:transform,opacity;
+}
+.reelSlideWrap.inUp { animation: reelWindowInUp .22s cubic-bezier(.22,.61,.36,1); }
+.reelSlideWrap.inDown { animation: reelWindowInDown .22s cubic-bezier(.22,.61,.36,1); }
+@keyframes reelWindowInUp {
+  0% { opacity:.18; transform:translateY(24px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+@keyframes reelWindowInDown {
+  0% { opacity:.18; transform:translateY(-24px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+.stopHint {
+  transition:opacity .16s ease, transform .2s cubic-bezier(.16,.84,.24,1);
+}
+.stopHint.pulse {
+  animation: hintPulse .18s ease-out;
+}
+@keyframes hintPulse {
+  0% { opacity:.25; transform:translateY(6px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+
+
+/* v0.2.15 inline SVG symbols */
+.symbolSvg {
+  width:62px;
+  height:50px;
+  display:block;
+  overflow:visible;
+  filter: drop-shadow(0 2px 0 rgba(0,0,0,.18));
+}
+.symbolSvg text {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 1000;
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+.symbolSvg .shine {
+  opacity:.55;
+}
+
+
+.modeReelArea { display:block; }
+.modeReelArea.hiddenMode { display:none; }
+.singleReelWrap {
+  display:grid;
+  grid-template-columns: 92px 1fr;
+  gap:10px;
+  align-items:center;
+  margin-top:10px;
+}
+.hotScoreBox {
+  display:grid;
+  gap:8px;
+}
+.hotScoreMain {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(255,216,74,.45);
+  background:linear-gradient(135deg, rgba(255,216,74,.13), rgba(255,40,215,.08));
+}
+.hotScoreNum {
+  font-size:28px;
+  font-weight:1000;
+  color:#ffe987;
+  line-height:1;
+}
+.hotStars {
+  font-size:18px;
+  letter-spacing:.06em;
+  color:#ffd84a;
+  white-space:nowrap;
+}
+.hotComment {
+  font-size:12px;
+  line-height:1.55;
+  color:#ffeeb0;
+}
+.breakdownGrid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+}
+.breakdownItem {
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;
+  background:rgba(10,5,10,.55);
+  padding:8px 6px;
+  text-align:center;
+}
+.breakdownItem .label {
+  font-size:10px;
+  color:var(--muted);
+  font-weight:800;
+}
+.breakdownItem .count {
+  margin-top:2px;
+  font-size:18px;
+  font-weight:1000;
+  color:#fff;
+}
+
+
+/* v0.2.23 real reel image window */
+.miniReelWindow {
+  width:126px;
+  justify-self:center;
+  background:#dce7ed;
+}
+.realReelStrip {
+  position:absolute;
+  left:0;
+  top:0;
+  width:126px;
+  will-change:transform;
+  transition:transform .22s ease-out;
+}
+.realReelStrip.inUp { animation:realReelInUp .18s ease-out; }
+.realReelStrip.inDown { animation:realReelInDown .18s ease-out; }
+.realReelSegment {
+  width:126px;
+  height:1138.3px;
+  background-image:url("./assets/reel_full.jpg");
+  background-size:510.6px 1303.9px;
+  background-position:-74.1px -143.0px;
+  background-repeat:no-repeat;
+}
+@keyframes realReelInUp {
+  from { opacity:.75; transform:translateY(10px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes realReelInDown {
+  from { opacity:.75; transform:translateY(-10px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.realReelFallback {
+  font-size:11px;
+  color:#111;
+  padding:8px;
+  text-align:center;
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+<header class="header">
+<h1>DUUR 左1st 制御アシスト 試作版 v0.2.23</h1>
+<p>左1st制御表から「押し位置＋停止位置」ベースで対応役を逆引きします。v0.2.23は <code>./assets/reel_full.jpg</code> を使い、左リール実画像をCSS窓表示する試作版です。</p>
+</header>
+<main class="grid">
+<section class="card">
+<h2>入力</h2>
+<div class="tabs">
+<button class="tab active" id="tabExact" type="button">押し位置＋停止位置</button>
+<button class="tab" id="tabStop" type="button">停止位置から推定</button>
+</div>
+
+<div id="exactReelArea" class="modeReelArea">
+<div class="dualReelCompare">
+  <div class="miniReelPanel">
+    <div class="miniReelTitle">押した位置</div>
+    <div class="miniReelControls">
+      <button class="secondary" id="pressUp" type="button">▲</button>
+      <button class="secondary" id="pressDown" type="button">▼</button>
+    </div>
+    <div class="miniReelWindow" id="pressReelWindow">
+      <div class="miniReelRow" id="pressUpper"></div>
+      <div class="miniReelRow" id="pressMiddle"></div>
+      <div class="miniReelRow" id="pressLower"></div>
+    </div>
+    <div class="stopHint" id="pressHint">14 スイカ</div>
+  </div>
+  <div class="compareArrow">→</div>
+  <div class="miniReelPanel">
+    <div class="miniReelTitle">実際に止まった位置</div>
+    <div class="miniReelControls">
+      <button class="secondary" id="stopUp" type="button">▲</button>
+      <button class="secondary" id="stopDown" type="button">▼</button>
+    </div>
+    <div class="miniReelWindow" id="stopReelWindow">
+      <div class="miniReelRow" id="stopUpper"></div>
+      <div class="miniReelRow" id="stopMiddle"></div>
+      <div class="miniReelRow" id="stopLower"></div>
+    </div>
+    <div class="stopHint" id="stopHint">ビタ停止</div>
+  </div>
+</div>
+
+</div>
+
+<div id="estimateReelArea" class="modeReelArea hiddenMode">
+  <div class="singleReelWrap">
+    <div class="reelControls">
+      <button class="secondary" id="estimateUp" type="button">▲</button>
+      <div class="stopHint" id="estimateHint">14 スイカ</div>
+      <button class="secondary" id="estimateDown" type="button">▼</button>
+    </div>
+    <div class="miniReelWindow" id="estimateReelWindow">
+      <div class="miniReelRow" id="estimateUpper"></div>
+      <div class="miniReelRow" id="estimateMiddle"></div>
+      <div class="miniReelRow" id="estimateLower"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modeExact" class="modePanel active">
+  <div class="form">
+    <label>押した番号<select id="pressSelect"></select></label>
+    <label>自動算出スベリ
+      <select id="slipSelect" class="hidden" aria-hidden="true">
+        <option value="0">0コマ / ビタ</option><option value="1">1コマ</option><option value="2">2コマ</option><option value="3">3コマ</option><option value="4">4コマ</option>
+      </select>
+      <div class="notice" id="autoSlipNotice">右の停止位置リールで0〜4コマ滑りを選択します。左リール変更時は右も自動追従します。</div>
+    </label>
+  </div>
+</div>
+
+<div id="modeStop" class="modePanel">
+  <div class="form">
+    <label>ざっくり押した位置
+      <select id="roughAreaSelect">
+        <option value="all">不明 / 全範囲</option>
+        <option value="red7">赤7付近</option>
+        <option value="white7">白7付近</option>
+        <option value="blackbar">黒BAR付近</option>
+        <option value="watermelon">スイカ付近</option>
+        <option value="cherry">チェリー付近</option>
+      </select>
+    </label>
+    <div class="notice">上の1リールで「実際に止まった停止形」を選び、ざっくり押した位置と演出で候補を絞ります。</div>
+  </div>
+</div>
+
+<div class="form">
+<label>演出・対応役メモ<select id="effectSelect"></select></label>
+<button id="analyzeBtn" type="button">解析</button>
+</div>
+<p class="footerNote">※左は押した位置、右は実際に止まった位置です。右リールは0〜4コマの範囲内だけ動き、図柄はインラインSVGで表示します。</p>
+</section>
+<section class="result" id="resultArea"><div class="resultCard"><h3>結果</h3><p class="small">入力後に解析結果を表示します。</p></div></section>
+</main>
+</div>
+
+<script>
+const CONTROL_DATA = [{"table": "上段表", "press": 20, "role": "ハズレ(0枚)", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "上段表", "press": 20, "role": "ハズレ(1枚)", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "上段表", "press": 20, "role": "リプレイ", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "1●"}, {"table": "上段表", "press": 20, "role": "3枚役", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "上段表", "press": 20, "role": "ボーナス濃厚3枚役", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "2↑"}, {"table": "上段表", "press": 20, "role": "チェリー", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "4↑"}, {"table": "上段表", "press": 20, "role": "ボーナス濃厚チェリー", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "4↑"}, {"table": "上段表", "press": 20, "role": "スイカA", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "2●"}, {"table": "上段表", "press": 20, "role": "スイカB", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 20, "cell": "0●"}, {"table": "上段表", "press": 20, "role": "リーチ目役T1", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "2●"}, {"table": "上段表", "press": 20, "role": "リーチ目役T2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "上段表", "press": 20, "role": "リーチ目役T3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "上段表", "press": 20, "role": "リーチ目役A1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "ハズレ(0枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "ハズレ(1枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "リプレイ", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "3枚役", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "3↑"}, {"table": "上段表", "press": 19, "role": "ボーナス濃厚3枚役", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 19, "cell": "0●"}, {"table": "上段表", "press": 19, "role": "ボーナス濃厚チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 19, "cell": "0●"}, {"table": "上段表", "press": 19, "role": "スイカA", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "1↑"}, {"table": "上段表", "press": 19, "role": "スイカB", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "3↑"}, {"table": "上段表", "press": 19, "role": "リーチ目役T1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "1↑"}, {"table": "上段表", "press": 19, "role": "リーチ目役T2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "リーチ目役T3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 19, "role": "リーチ目役A1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "上段表", "press": 18, "role": "ハズレ(0枚)", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "上段表", "press": 18, "role": "ハズレ(1枚)", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 18, "role": "リプレイ", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "上段表", "press": 18, "role": "3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 18, "role": "ボーナス濃厚3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 18, "role": "チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 19, "cell": "1↑"}, {"table": "上段表", "press": 18, "role": "ボーナス濃厚チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 19, "cell": "1↑"}, {"table": "上段表", "press": 18, "role": "スイカA", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 18, "role": "スイカB", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 18, "role": "リーチ目役T1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 18, "role": "リーチ目役T2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "上段表", "press": 18, "role": "リーチ目役T3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "上段表", "press": 18, "role": "リーチ目役A1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "ハズレ(0枚)", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "ハズレ(1枚)", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "リプレイ", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "ボーナス濃厚3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 17, "cell": "0●"}, {"table": "上段表", "press": 17, "role": "ボーナス濃厚チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 17, "cell": "0●"}, {"table": "上段表", "press": 17, "role": "スイカA", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "3↑"}, {"table": "上段表", "press": 17, "role": "スイカB", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "3↑"}, {"table": "上段表", "press": 17, "role": "リーチ目役T1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "3↑"}, {"table": "上段表", "press": 17, "role": "リーチ目役T2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "リーチ目役T3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 17, "role": "リーチ目役A1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "上段表", "press": 16, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "リプレイ", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "4↑"}, {"table": "上段表", "press": 16, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "ボーナス濃厚3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "1↑"}, {"table": "上段表", "press": 16, "role": "ボーナス濃厚チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "1↑"}, {"table": "上段表", "press": 16, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "スイカB", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "リーチ目役T2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "リーチ目役T3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 16, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "リプレイ", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "ボーナス濃厚3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "チェリー", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "2↑"}, {"table": "上段表", "press": 15, "role": "ボーナス濃厚チェリー", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "2↑"}, {"table": "上段表", "press": 15, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "スイカB", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 15, "role": "リーチ目役T2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "1●"}, {"table": "上段表", "press": 15, "role": "リーチ目役T3", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "1●"}, {"table": "上段表", "press": 15, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "リプレイ", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "1↑"}, {"table": "上段表", "press": 14, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "ボーナス濃厚3枚役", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "1●"}, {"table": "上段表", "press": 14, "role": "チェリー", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "3↑"}, {"table": "上段表", "press": 14, "role": "ボーナス濃厚チェリー", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "3↑"}, {"table": "上段表", "press": 14, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "スイカB", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "リーチ目役T2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "リーチ目役T3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "上段表", "press": 14, "role": "リーチ目役A1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "1●"}, {"table": "上段表", "press": 13, "role": "ハズレ(0枚)", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "上段表", "press": 13, "role": "ハズレ(1枚)", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "1●"}, {"table": "上段表", "press": 13, "role": "リプレイ", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "0●"}, {"table": "上段表", "press": 13, "role": "3枚役", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "上段表", "press": 13, "role": "ボーナス濃厚3枚役", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "2↑"}, {"table": "上段表", "press": 13, "role": "チェリー", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "4↑"}, {"table": "上段表", "press": 13, "role": "ボーナス濃厚チェリー", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 17, "cell": "4↑"}, {"table": "上段表", "press": 13, "role": "スイカA", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "上段表", "press": 13, "role": "スイカB", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "2↑"}, {"table": "上段表", "press": 13, "role": "リーチ目役T1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "上段表", "press": 13, "role": "リーチ目役T2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "2↑"}, {"table": "上段表", "press": 13, "role": "リーチ目役T3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "2↑"}, {"table": "上段表", "press": 13, "role": "リーチ目役A1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "上段表", "press": 12, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "ハズレ(1枚)", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "1●"}, {"table": "上段表", "press": 12, "role": "リプレイ", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "3枚役", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "3↑"}, {"table": "上段表", "press": 12, "role": "ボーナス濃厚3枚役", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "上段表", "press": 12, "role": "チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "ボーナス濃厚チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "スイカB", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "上段表", "press": 12, "role": "リーチ目役T2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "上段表", "press": 12, "role": "リーチ目役T3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "上段表", "press": 12, "role": "リーチ目役A1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "上段表", "press": 11, "role": "ハズレ(0枚)", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "ハズレ(1枚)", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "リプレイ", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 13, "cell": "2↑"}, {"table": "上段表", "press": 11, "role": "3枚役", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "上段表", "press": 11, "role": "ボーナス濃厚3枚役", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "上段表", "press": 11, "role": "チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "ボーナス濃厚チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "スイカA", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "スイカB", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "リーチ目役T1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "上段表", "press": 11, "role": "リーチ目役T2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "上段表", "press": 11, "role": "リーチ目役T3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "上段表", "press": 11, "role": "リーチ目役A1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "上段表", "press": 10, "role": "ハズレ(0枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "ハズレ(1枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "リプレイ", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "上段表", "press": 10, "role": "ボーナス濃厚3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "上段表", "press": 10, "role": "チェリー", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "ボーナス濃厚チェリー", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "スイカA", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "スイカB", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "リーチ目役T1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "上段表", "press": 10, "role": "リーチ目役T2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "上段表", "press": 10, "role": "リーチ目役T3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "上段表", "press": 10, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "リプレイ", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "3↑"}, {"table": "上段表", "press": 9, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "ボーナス濃厚3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "チェリー", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "3↑"}, {"table": "上段表", "press": 9, "role": "ボーナス濃厚チェリー", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "3↑"}, {"table": "上段表", "press": 9, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "スイカB", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "3●"}, {"table": "上段表", "press": 9, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "リーチ目役T2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "リーチ目役T3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 9, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "上段表", "press": 8, "role": "ハズレ(0枚)", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "ハズレ(1枚)", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "リプレイ", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "4↑"}, {"table": "上段表", "press": 8, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "上段表", "press": 8, "role": "ボーナス濃厚3枚役", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "チェリー", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "4↑"}, {"table": "上段表", "press": 8, "role": "ボーナス濃厚チェリー", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "4↑"}, {"table": "上段表", "press": 8, "role": "スイカA", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "スイカB", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "リーチ目役T1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "リーチ目役T2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "リーチ目役T3", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "上段表", "press": 8, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "リプレイ", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "3枚役", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "2↑"}, {"table": "上段表", "press": 7, "role": "ボーナス濃厚3枚役", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "1↑"}, {"table": "上段表", "press": 7, "role": "チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "ボーナス濃厚チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "スイカB", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "1●"}, {"table": "上段表", "press": 7, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "上段表", "press": 7, "role": "リーチ目役T2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "2↑"}, {"table": "上段表", "press": 7, "role": "リーチ目役T3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "2↑"}, {"table": "上段表", "press": 7, "role": "リーチ目役A1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "1↑"}, {"table": "上段表", "press": 6, "role": "ハズレ(0枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "上段表", "press": 6, "role": "ハズレ(1枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "上段表", "press": 6, "role": "リプレイ", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "1↑"}, {"table": "上段表", "press": 6, "role": "3枚役", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "上段表", "press": 6, "role": "ボーナス濃厚3枚役", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "3↑"}, {"table": "上段表", "press": 6, "role": "チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 6, "cell": "0●"}, {"table": "上段表", "press": 6, "role": "ボーナス濃厚チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 6, "cell": "0●"}, {"table": "上段表", "press": 6, "role": "スイカA", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "上段表", "press": 6, "role": "スイカB", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "3↑"}, {"table": "上段表", "press": 6, "role": "リーチ目役T1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "上段表", "press": 6, "role": "リーチ目役T2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "3↑"}, {"table": "上段表", "press": 6, "role": "リーチ目役T3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "3↑"}, {"table": "上段表", "press": 6, "role": "リーチ目役A1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "上段表", "press": 5, "role": "ハズレ(0枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "2↑"}, {"table": "上段表", "press": 5, "role": "ハズレ(1枚)", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "2↑"}, {"table": "上段表", "press": 5, "role": "リプレイ", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "2↑"}, {"table": "上段表", "press": 5, "role": "3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "上段表", "press": 5, "role": "ボーナス濃厚3枚役", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "上段表", "press": 5, "role": "チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 6, "cell": "1↑"}, {"table": "上段表", "press": 5, "role": "ボーナス濃厚チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 6, "cell": "1↑"}, {"table": "上段表", "press": 5, "role": "スイカA", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "上段表", "press": 5, "role": "スイカB", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "上段表", "press": 5, "role": "リーチ目役T1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "上段表", "press": 5, "role": "リーチ目役T2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "上段表", "press": 5, "role": "リーチ目役T3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "上段表", "press": 5, "role": "リーチ目役A1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "上段表", "press": 4, "role": "ハズレ(0枚)", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "上段表", "press": 4, "role": "ハズレ(1枚)", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "上段表", "press": 4, "role": "リプレイ", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "上段表", "press": 4, "role": "3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "上段表", "press": 4, "role": "ボーナス濃厚3枚役", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "上段表", "press": 4, "role": "チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 4, "cell": "0●"}, {"table": "上段表", "press": 4, "role": "ボーナス濃厚チェリー", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 4, "cell": "0●"}, {"table": "上段表", "press": 4, "role": "スイカA", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "上段表", "press": 4, "role": "スイカB", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "上段表", "press": 4, "role": "リーチ目役T1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "上段表", "press": 4, "role": "リーチ目役T2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "上段表", "press": 4, "role": "リーチ目役T3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "上段表", "press": 4, "role": "リーチ目役A1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "上段表", "press": 3, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "リプレイ", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "ボーナス濃厚3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "1↑"}, {"table": "上段表", "press": 3, "role": "ボーナス濃厚チェリー", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "1↑"}, {"table": "上段表", "press": 3, "role": "スイカA", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "4↑"}, {"table": "上段表", "press": 3, "role": "スイカB", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "4↑"}, {"table": "上段表", "press": 3, "role": "リーチ目役T1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "4↑"}, {"table": "上段表", "press": 3, "role": "リーチ目役T2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "リーチ目役T3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 3, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "ハズレ(0枚)", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "1↑"}, {"table": "上段表", "press": 2, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "リプレイ", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "1↑"}, {"table": "上段表", "press": 2, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "ボーナス濃厚3枚役", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "1●"}, {"table": "上段表", "press": 2, "role": "チェリー", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "2↑"}, {"table": "上段表", "press": 2, "role": "ボーナス濃厚チェリー", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "2↑"}, {"table": "上段表", "press": 2, "role": "スイカA", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "スイカB", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "リーチ目役T1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "リーチ目役T2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "リーチ目役T3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 2, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "上段表", "press": 1, "role": "ハズレ(0枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "上段表", "press": 1, "role": "ハズレ(1枚)", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "上段表", "press": 1, "role": "リプレイ", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "上段表", "press": 1, "role": "3枚役", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "上段表", "press": 1, "role": "ボーナス濃厚3枚役", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "1●"}, {"table": "上段表", "press": 1, "role": "チェリー", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "3↑"}, {"table": "上段表", "press": 1, "role": "ボーナス濃厚チェリー", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 4, "cell": "3↑"}, {"table": "上段表", "press": 1, "role": "スイカA", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "1↑"}, {"table": "上段表", "press": 1, "role": "スイカB", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "1↑"}, {"table": "上段表", "press": 1, "role": "リーチ目役T1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "1↑"}, {"table": "上段表", "press": 1, "role": "リーチ目役T2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "1●"}, {"table": "上段表", "press": 1, "role": "リーチ目役T3", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "1●"}, {"table": "上段表", "press": 1, "role": "リーチ目役A1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 20, "role": "リーチ目役A2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "3↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役B1", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "3●"}, {"table": "下段表", "press": 20, "role": "リーチ目役B2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役B3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役C1", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "2●"}, {"table": "下段表", "press": 20, "role": "リーチ目役C2", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "2●"}, {"table": "下段表", "press": 20, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 20, "cell": "0●"}, {"table": "下段表", "press": 20, "role": "リーチ目役D1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役D2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "2↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役E", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役F", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 20, "cell": "0●"}, {"table": "下段表", "press": 20, "role": "リーチ目役G1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "下段表", "press": 20, "role": "リーチ目役G2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "1↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役A2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "3↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "4↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役B2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役B3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "3↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役C1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "3↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役C2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "1↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役C3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "1↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役D1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役D2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役E", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "3↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役F", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 20, "cell": "1●"}, {"table": "下段表", "press": 19, "role": "リーチ目役G1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "下段表", "press": 19, "role": "リーチ目役G2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "2↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役A2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役B2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役B3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役C1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役C2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役C3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "2↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役D1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役D2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "4↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役E", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "3●"}, {"table": "下段表", "press": 18, "role": "リーチ目役F", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 20, "cell": "2●"}, {"table": "下段表", "press": 18, "role": "リーチ目役G1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "下段表", "press": 18, "role": "リーチ目役G2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "3↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役A2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役B2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役B3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役C1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役C2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "3↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役C3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "3↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役D1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役D2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役E", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役F", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "3↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役G1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 17, "role": "リーチ目役G2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 1, "cell": "4↑"}, {"table": "下段表", "press": 16, "role": "リーチ目役A2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役B1", "slip": 4, "mark": "●", "markMeaning": "停止位置", "stop": 20, "cell": "4●"}, {"table": "下段表", "press": 16, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役C1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "4↑"}, {"table": "下段表", "press": 16, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役E", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 20, "cell": "4↑"}, {"table": "下段表", "press": 16, "role": "リーチ目役G1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 16, "role": "リーチ目役G2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役A2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役B1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 16, "cell": "1●"}, {"table": "下段表", "press": 15, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役C1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "0●"}, {"table": "下段表", "press": 15, "role": "リーチ目役E", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 18, "cell": "3↑"}, {"table": "下段表", "press": 15, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 19, "cell": "4↑"}, {"table": "下段表", "press": 15, "role": "リーチ目役G1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 16, "cell": "1↑"}, {"table": "下段表", "press": 15, "role": "リーチ目役G2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 16, "cell": "1↑"}, {"table": "下段表", "press": 14, "role": "リーチ目役A2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "1●"}, {"table": "下段表", "press": 14, "role": "リーチ目役B1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 16, "cell": "2↑"}, {"table": "下段表", "press": 14, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役C1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役C3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "1↑"}, {"table": "下段表", "press": 14, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役D2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 15, "cell": "1●"}, {"table": "下段表", "press": 14, "role": "リーチ目役E", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 18, "cell": "4↑"}, {"table": "下段表", "press": 14, "role": "リーチ目役G1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 14, "role": "リーチ目役G2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "0●"}, {"table": "下段表", "press": 13, "role": "リーチ目役A2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "2↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役B1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 16, "cell": "3↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "0●"}, {"table": "下段表", "press": 13, "role": "リーチ目役B3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役C1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "2↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役C2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "0●"}, {"table": "下段表", "press": 13, "role": "リーチ目役D1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役D2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役E", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "1↑"}, {"table": "下段表", "press": 13, "role": "リーチ目役F", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "0●"}, {"table": "下段表", "press": 13, "role": "リーチ目役G1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "1●"}, {"table": "下段表", "press": 13, "role": "リーチ目役G2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "1●"}, {"table": "下段表", "press": 12, "role": "リーチ目役A2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "3↑"}, {"table": "下段表", "press": 12, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 16, "cell": "4↑"}, {"table": "下段表", "press": 12, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "下段表", "press": 12, "role": "リーチ目役B3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "3↑"}, {"table": "下段表", "press": 12, "role": "リーチ目役C1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "下段表", "press": 12, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "下段表", "press": 12, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "下段表", "press": 12, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "0●"}, {"table": "下段表", "press": 12, "role": "リーチ目役D2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "下段表", "press": 12, "role": "リーチ目役E", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 16, "cell": "4↑"}, {"table": "下段表", "press": 12, "role": "リーチ目役F", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "1●"}, {"table": "下段表", "press": 12, "role": "リーチ目役G1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "下段表", "press": 12, "role": "リーチ目役G2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "2↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役A2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 15, "cell": "4↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役B2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役B3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役C1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役C2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役C3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役D1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "1↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役D2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "下段表", "press": 11, "role": "リーチ目役E", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 11, "cell": "0●"}, {"table": "下段表", "press": 11, "role": "リーチ目役F", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 13, "cell": "2●"}, {"table": "下段表", "press": 11, "role": "リーチ目役G1", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 14, "cell": "3●"}, {"table": "下段表", "press": 11, "role": "リーチ目役G2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "3↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役A2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "下段表", "press": 10, "role": "リーチ目役B1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "下段表", "press": 10, "role": "リーチ目役B2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "下段表", "press": 10, "role": "リーチ目役C1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役C2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役C3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役D1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "2↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "下段表", "press": 10, "role": "リーチ目役E", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "0●"}, {"table": "下段表", "press": 10, "role": "リーチ目役F", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 13, "cell": "3↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役G1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 11, "cell": "1↑"}, {"table": "下段表", "press": 10, "role": "リーチ目役G2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 14, "cell": "4↑"}, {"table": "下段表", "press": 9, "role": "リーチ目役A2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "1●"}, {"table": "下段表", "press": 9, "role": "リーチ目役B1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "1●"}, {"table": "下段表", "press": 9, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "下段表", "press": 9, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "下段表", "press": 9, "role": "リーチ目役C1", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 12, "cell": "3●"}, {"table": "下段表", "press": 9, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "下段表", "press": 9, "role": "リーチ目役C3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "3↑"}, {"table": "下段表", "press": 9, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "下段表", "press": 9, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "下段表", "press": 9, "role": "リーチ目役E", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "0●"}, {"table": "下段表", "press": 9, "role": "リーチ目役F", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 11, "cell": "2↑"}, {"table": "下段表", "press": 9, "role": "リーチ目役G1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 13, "cell": "4↑"}, {"table": "下段表", "press": 9, "role": "リーチ目役G2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 13, "cell": "4↑"}, {"table": "下段表", "press": 8, "role": "リーチ目役A2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 8, "role": "リーチ目役B1", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "2●"}, {"table": "下段表", "press": 8, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 8, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 8, "role": "リーチ目役C1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "下段表", "press": 8, "role": "リーチ目役C2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 9, "cell": "1●"}, {"table": "下段表", "press": 8, "role": "リーチ目役C3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "4↑"}, {"table": "下段表", "press": 8, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 8, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 8, "role": "リーチ目役E", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 8, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 12, "cell": "4↑"}, {"table": "下段表", "press": 8, "role": "リーチ目役G1", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 11, "cell": "3●"}, {"table": "下段表", "press": 8, "role": "リーチ目役G2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "0●"}, {"table": "下段表", "press": 7, "role": "リーチ目役A2", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "3●"}, {"table": "下段表", "press": 7, "role": "リーチ目役B1", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 10, "cell": "3●"}, {"table": "下段表", "press": 7, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "下段表", "press": 7, "role": "リーチ目役B3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "2↑"}, {"table": "下段表", "press": 7, "role": "リーチ目役C1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "1●"}, {"table": "下段表", "press": 7, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "下段表", "press": 7, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "下段表", "press": 7, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "0●"}, {"table": "下段表", "press": 7, "role": "リーチ目役D2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "1↑"}, {"table": "下段表", "press": 7, "role": "リーチ目役E", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "1↑"}, {"table": "下段表", "press": 7, "role": "リーチ目役F", "slip": 4, "mark": "●", "markMeaning": "停止位置", "stop": 11, "cell": "4●"}, {"table": "下段表", "press": 7, "role": "リーチ目役G1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 11, "cell": "4↑"}, {"table": "下段表", "press": 7, "role": "リーチ目役G2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "1↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役A2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 10, "cell": "4↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役B2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "1↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役B3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役C1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "3↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役C2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役C3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "1↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役D1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "1↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役D2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役E", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役F", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "1●"}, {"table": "下段表", "press": 6, "role": "リーチ目役G1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 6, "role": "リーチ目役G2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "2↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役A2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役B2", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "2↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役B3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役C1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役C2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役C3", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "2↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役D1", "slip": 2, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "2↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役D2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 9, "cell": "4↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役E", "slip": 3, "mark": "●", "markMeaning": "停止位置", "stop": 8, "cell": "3●"}, {"table": "下段表", "press": 5, "role": "リーチ目役F", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "2●"}, {"table": "下段表", "press": 5, "role": "リーチ目役G1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "下段表", "press": 5, "role": "リーチ目役G2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "3↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役A2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役B1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役B2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役B3", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役C1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役C2", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役C3", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役D1", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役D2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役E", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役F", "slip": 3, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "3↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役G1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 4, "role": "リーチ目役G2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 8, "cell": "4↑"}, {"table": "下段表", "press": 3, "role": "リーチ目役A2", "slip": 4, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "4●"}, {"table": "下段表", "press": 3, "role": "リーチ目役B1", "slip": 4, "mark": "●", "markMeaning": "停止位置", "stop": 7, "cell": "4●"}, {"table": "下段表", "press": 3, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 3, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 3, "role": "リーチ目役C1", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "4↑"}, {"table": "下段表", "press": 3, "role": "リーチ目役C2", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "4↑"}, {"table": "下段表", "press": 3, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 3, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 3, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 3, "role": "リーチ目役E", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 5, "cell": "2●"}, {"table": "下段表", "press": 3, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 7, "cell": "4↑"}, {"table": "下段表", "press": 3, "role": "リーチ目役G1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 3, "role": "リーチ目役G2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "0●"}, {"table": "下段表", "press": 2, "role": "リーチ目役A2", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "1●"}, {"table": "下段表", "press": 2, "role": "リーチ目役B1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "1●"}, {"table": "下段表", "press": 2, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "下段表", "press": 2, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "下段表", "press": 2, "role": "リーチ目役C1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "下段表", "press": 2, "role": "リーチ目役C2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "下段表", "press": 2, "role": "リーチ目役C3", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "1↑"}, {"table": "下段表", "press": 2, "role": "リーチ目役D1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "1↑"}, {"table": "下段表", "press": 2, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "0●"}, {"table": "下段表", "press": 2, "role": "リーチ目役E", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "1●"}, {"table": "下段表", "press": 2, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 6, "cell": "4↑"}, {"table": "下段表", "press": 2, "role": "リーチ目役G1", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "1↑"}, {"table": "下段表", "press": 2, "role": "リーチ目役G2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 3, "cell": "1↑"}, {"table": "下段表", "press": 1, "role": "リーチ目役A2", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "2●"}, {"table": "下段表", "press": 1, "role": "リーチ目役B1", "slip": 2, "mark": "●", "markMeaning": "停止位置", "stop": 3, "cell": "2●"}, {"table": "下段表", "press": 1, "role": "リーチ目役B2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 1, "role": "リーチ目役B3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 1, "role": "リーチ目役C1", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "1●"}, {"table": "下段表", "press": 1, "role": "リーチ目役C2", "slip": 1, "mark": "↑", "markMeaning": "スベリ発生", "stop": 2, "cell": "1↑"}, {"table": "下段表", "press": 1, "role": "リーチ目役C3", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 1, "role": "リーチ目役D1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 1, "role": "リーチ目役D2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 1, "role": "リーチ目役E", "slip": 1, "mark": "●", "markMeaning": "停止位置", "stop": 2, "cell": "1●"}, {"table": "下段表", "press": 1, "role": "リーチ目役F", "slip": 4, "mark": "↑", "markMeaning": "スベリ発生", "stop": 5, "cell": "4↑"}, {"table": "下段表", "press": 1, "role": "リーチ目役G1", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}, {"table": "下段表", "press": 1, "role": "リーチ目役G2", "slip": 0, "mark": "●", "markMeaning": "停止位置", "stop": 1, "cell": "0●"}];
+const REEL = {"20": "スイカ", "19": "チェリー", "18": "星", "17": "スイカ", "16": "赤7", "15": "リプレイ", "14": "スイカ", "13": "星", "12": "リプレイ", "11": "星", "10": "白7", "9": "スイカ", "8": "星", "7": "リプレイ", "6": "チェリー", "5": "リプレイ", "4": "星", "3": "黒BAR", "2": "スイカ", "1": "リプレイ"};
+const EFFECT_DATA = [{"id":"common_notice","label":"予告音 / 共通","mode":"共通","scene":"通常時/AT中","roleGroups":"koyakuPlus","exactRoles":"小役以上","denyRoles":"","hotText":"候補がハズレのみなら矛盾候補"},{"id":"common_blackout","label":"消灯 / 消灯数で対応役変化","mode":"共通","scene":"通常時/AT中","roleGroups":"","exactRoles":"消灯数依存","denyRoles":"","hotText":"対応消灯数と候補役が合わなければ矛盾候補"},{"id":"common_delay","label":"遅れ / 共通","mode":"共通","scene":"通常時/AT中","roleGroups":"cherry|bonusDense","exactRoles":"チェリー or ボーナス","denyRoles":"","hotText":"チェリー候補なし＋ボーナス系なしなら矛盾候補"},{"id":"common_silent_start","label":"無音スタート / 共通","mode":"共通","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"ボーナス濃厚","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"common_slip_sound","label":"スベリ音 / 共通","mode":"共通","scene":"通常時/AT中","roleGroups":"cherry|notCherry","exactRoles":"チェリー否定","denyRoles":"","hotText":"チェリー候補のみなら矛盾候補"},{"id":"common_double_start","label":"ダブルスタート音 / 共通","mode":"共通","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"ボーナス期待","denyRoles":"","hotText":"ボーナスの大チャンス"},{"id":"common_triple_start","label":"トリプルスタート音 / 共通","mode":"共通","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"ボーナス濃厚","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"rm_roulette_eggman","label":"RMルーレット演出 / エッグマンver.","mode":"REMIX","scene":"通常時","roleGroups":"","exactRoles":"非小役対応","denyRoles":"","hotText":"小役候補のみなら法則崩れ候補"},{"id":"rm_roulette_iris","label":"RMルーレット演出 / アイリスver.","mode":"REMIX","scene":"通常時","roleGroups":"sanmai|rare","exactRoles":"7☆☆ or レア役","denyRoles":"","hotText":"通常役のみなら法則崩れ候補"},{"id":"rm_roulette_bv","label":"RMルーレット演出 / B or V停止","mode":"REMIX","scene":"通常時","roleGroups":"bonusDense","exactRoles":"ボーナス濃厚","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"rm_slash_bell_suika","label":"スラッシュ告知演出 / ベル/スイカ","mode":"REMIX","scene":"通常時","roleGroups":"suikaAny","exactRoles":"ベル or スイカ","denyRoles":"","hotText":"第2停止で決定しなければ期待度アップ"},{"id":"rm_slash_cherry_suika","label":"スラッシュ告知演出 / チェリー/スイカ","mode":"REMIX","scene":"通常時","roleGroups":"cherry|suikaAny","exactRoles":"チェリー or スイカ","denyRoles":"","hotText":"チェリー否定で期待度50%以上"},{"id":"rm_slash_three","label":"スラッシュ告知演出 / 3分割","mode":"REMIX","scene":"通常時","roleGroups":"cherry|suikaA","exactRoles":"チェリー or スイカA中心","denyRoles":"","hotText":"チェリー・スイカA否定で期待度アップ"},{"id":"rm_su_egg_su2","label":"ステップアップ演出 / エッグマン SU2","mode":"REMIX","scene":"通常時","roleGroups":"replay|bonusDense","exactRoles":"リプレイ or ボーナス","denyRoles":"","hotText":"リプレイ候補なしならボーナス期待"},{"id":"rm_su_egg_su3","label":"ステップアップ演出 / エッグマン SU3","mode":"REMIX","scene":"通常時","roleGroups":"sanmai|suikaA|bonusDense","exactRoles":"7☆☆ or スイカA or ボーナス","denyRoles":"","hotText":"候補外なら法則崩れ候補"},{"id":"rm_su_egg_su4","label":"ステップアップ演出 / エッグマン SU4","mode":"REMIX","scene":"通常時","roleGroups":"sanmai|suikaB|bonusDense","exactRoles":"7☆☆ or スイカB or ボーナス","denyRoles":"","hotText":"候補外なら法則崩れ候補"},{"id":"rm_su_egg_su5","label":"ステップアップ演出 / エッグマン SU5","mode":"REMIX","scene":"通常時","roleGroups":"suikaA|bonusDense","exactRoles":"スイカA or ボーナス","denyRoles":"","hotText":"スイカA候補なしならボーナス期待"},{"id":"rm_su_iris_su2","label":"ステップアップ演出 / アイリス SU2","mode":"REMIX","scene":"通常時","roleGroups":"cherry|bonusDense","exactRoles":"チェリー or ボーナス","denyRoles":"","hotText":"チェリー候補なしならボーナス期待"},{"id":"rm_su_iris_su3","label":"ステップアップ演出 / アイリス SU3","mode":"REMIX","scene":"通常時","roleGroups":"sanmai|suikaB|bonusDense","exactRoles":"7☆☆ or スイカB or ボーナス","denyRoles":"","hotText":"候補外なら法則崩れ候補"},{"id":"rm_su_iris_su4","label":"ステップアップ演出 / アイリス SU4","mode":"REMIX","scene":"通常時","roleGroups":"sanmai|suikaA|bonusDense","exactRoles":"7☆☆ or スイカA or ボーナス","denyRoles":"","hotText":"候補外なら法則崩れ候補"},{"id":"rm_su_iris_su5","label":"ステップアップ演出 / アイリス SU5","mode":"REMIX","scene":"通常時","roleGroups":"suikaA|bonusDense","exactRoles":"スイカA or ボーナス","denyRoles":"","hotText":"スイカA候補なしならボーナス期待"},{"id":"rm_su_both_su4","label":"ステップアップ演出 / エッグマン&アイリス SU4","mode":"REMIX","scene":"通常時","roleGroups":"suikaA|bonusDense","exactRoles":"スイカA or ボーナス","denyRoles":"","hotText":"スイカA候補なしならボーナス期待"},{"id":"rm_su_both_su5","label":"ステップアップ演出 / エッグマン&アイリス SU5","mode":"REMIX","scene":"通常時","roleGroups":"suikaB|bonusDense","exactRoles":"スイカB or ボーナス","denyRoles":"","hotText":"スイカB候補なしならボーナス期待"},{"id":"rm_su_both_other","label":"ステップアップ演出 / エッグマン&アイリス その他","mode":"REMIX","scene":"通常時","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"rm_egg_trick_fail","label":"エッグマントリック演出 / トリック失敗","mode":"REMIX","scene":"通常時","roleGroups":"hazure","exactRoles":"ハズレ","denyRoles":"","hotText":"ハズレ候補なしなら矛盾候補"},{"id":"rm_egg_trick_cool","label":"エッグマントリック演出 / COOL","mode":"REMIX","scene":"通常時","roleGroups":"replay|sanmai","exactRoles":"リプレイ or 7☆☆","denyRoles":"","hotText":"候補外なら矛盾候補"},{"id":"rm_egg_trick_great","label":"エッグマントリック演出 / GREAT","mode":"REMIX","scene":"通常時","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ候補なしなら矛盾候補"},{"id":"rm_iris_aura","label":"アイリスオーラ演出 / 発生時","mode":"REMIX","scene":"通常時","roleGroups":"koyakuPlus","exactRoles":"小役以上","denyRoles":"","hotText":"ハズレのみなら矛盾候補"},{"id":"rm_push_bashun","label":"PUSH演出 / バシュンキャラリン","mode":"REMIX","scene":"AT中","roleGroups":"cherry","exactRoles":"チェリー","denyRoles":"","hotText":"チェリー候補なしなら矛盾候補"},{"id":"rm_push_iris_chance","label":"PUSH演出 / アイリスチャンス","mode":"REMIX","scene":"AT中","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ候補なしなら矛盾候補"},{"id":"rm_push_slip_sound","label":"PUSH演出 / スベリ音","mode":"REMIX","scene":"AT中","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ候補なしなら矛盾候補"},{"id":"rm_box_pigeon1","label":"エッグマンBOX演出 / 鳩1羽","mode":"REMIX","scene":"AT中","roleGroups":"hazure","exactRoles":"ハズレ","denyRoles":"","hotText":"ハズレ候補なしなら矛盾候補"},{"id":"rm_box_pigeons","label":"エッグマンBOX演出 / 鳩大量","mode":"REMIX","scene":"AT中","roleGroups":"cherry","exactRoles":"チェリー","denyRoles":"","hotText":"チェリー候補なしなら矛盾候補"},{"id":"rm_box_cards","label":"エッグマンBOX演出 / トランプ","mode":"REMIX","scene":"AT中","roleGroups":"replay|sanmai","exactRoles":"リプレイ or 7☆☆","denyRoles":"","hotText":"候補外なら矛盾候補"},{"id":"rm_box_burger","label":"エッグマンBOX演出 / ハンバーガー","mode":"REMIX","scene":"AT中","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ候補なしなら矛盾候補"},{"id":"rm_box_flower","label":"エッグマンBOX演出 / 花束","mode":"REMIX","scene":"AT中","roleGroups":"rare","exactRoles":"レア役","denyRoles":"","hotText":"レア役候補なしなら矛盾候補"},{"id":"rm_box_bv","label":"エッグマンBOX演出 / B or V","mode":"REMIX","scene":"AT中","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"rm_record_small","label":"レコードジャケット演出 / 小","mode":"REMIX","scene":"AT中","roleGroups":"replay|sanmai","exactRoles":"リプレイ or 7☆☆","denyRoles":"","hotText":"候補外なら矛盾候補"},{"id":"rm_record_mid","label":"レコードジャケット演出 / 中","mode":"REMIX","scene":"AT中","roleGroups":"cherry|suikaAny","exactRoles":"チェリー or スイカ","denyRoles":"","hotText":"候補外なら矛盾候補"},{"id":"rm_record_large","label":"レコードジャケット演出 / 大","mode":"REMIX","scene":"AT中","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ候補なしなら矛盾候補"},{"id":"du_radio_bgm","label":"ラジカセ演出 / BGM切替","mode":"DISC UP","scene":"通常時","roleGroups":"koyakuPlus","exactRoles":"小役以上","denyRoles":"","hotText":"ハズレのみなら矛盾候補"},{"id":"du_eq_vg","label":"イコライザー演出 / V or G","mode":"DISC UP","scene":"AT中","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"du_premium_character","label":"キャラ登場演出 / プレミアム","mode":"DISC UP","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"異色BIG","denyRoles":"","hotText":"同色BIG時はウルトラBIG濃厚"},{"id":"du_premium_triple","label":"トリプルスタート音 / プレミアム","mode":"DISC UP","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"BIG","denyRoles":"","hotText":"BIG濃厚"},{"id":"du_premium_silent","label":"無音スタート / プレミアム","mode":"DISC UP","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"異色BIG","denyRoles":"","hotText":"異色BIG濃厚"},{"id":"cl_navi","label":"ナビ演出 / ナビ発生","mode":"CLASSIC","scene":"通常時","roleGroups":"bonusDense","exactRoles":"BIG期待","denyRoles":"","hotText":"ナビハズレでBIG濃厚"},{"id":"cl_chararin_normal","label":"キャラリンフラッシュ / 通常時発生","mode":"CLASSIC","scene":"通常時","roleGroups":"bonusDense","exactRoles":"BIG","denyRoles":"","hotText":"通常時ならBIG濃厚"},{"id":"cl_chararin_at","label":"キャラリンフラッシュ / AT中発生","mode":"CLASSIC","scene":"AT中","roleGroups":"rare","exactRoles":"レア役","denyRoles":"","hotText":"主にAT中レア役成立時"},{"id":"cl_notice1","label":"予告音1 / 単独","mode":"CLASSIC","scene":"共通","roleGroups":"hazure|sanmai|cherry","exactRoles":"ハズレ or 3枚役 or チェリー","denyRoles":"","hotText":"消灯複合ならボーナス濃厚"},{"id":"cl_notice1_chararin","label":"予告音1 / レバーON時＋キャラリンフラッシュ","mode":"CLASSIC","scene":"共通","roleGroups":"cherry","exactRoles":"チェリー","denyRoles":"","hotText":"チェリー候補なしなら矛盾候補"},{"id":"cl_notice1_hr1st","label":"予告音1 / 第1停止時HRルーレット","mode":"CLASSIC","scene":"共通","roleGroups":"suikaAny","exactRoles":"スイカ or 発展","denyRoles":"","hotText":"スイカ候補なし＋非発展なら矛盾候補"},{"id":"cl_notice2","label":"予告音2 / 単独","mode":"CLASSIC","scene":"共通","roleGroups":"replay|sanmai","exactRoles":"リプレイ or 3枚役","denyRoles":"","hotText":"候補外なら矛盾候補"},{"id":"cl_notice2_blackout1","label":"予告音2 / 1消灯複合","mode":"CLASSIC","scene":"共通","roleGroups":"replay|sanmai|cherry","exactRoles":"チェリー or リプレイ or 3枚役","denyRoles":"","hotText":"候補外なら矛盾候補"},{"id":"cl_notice2_blackout2","label":"予告音2 / 2消灯複合","mode":"CLASSIC","scene":"共通","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ候補なしなら矛盾候補"},{"id":"cl_notice2_blackout3_nohr","label":"予告音2 / 3消灯＋HR非発展","mode":"CLASSIC","scene":"共通","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ成立＋大チャンス"},{"id":"cl_notice2_irregular_blackout","label":"予告音2 / 変則消灯","mode":"CLASSIC","scene":"共通","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"cl_notice2_chararin_no_blackout","label":"予告音2 / キャラリン複合＋消灯なし","mode":"CLASSIC","scene":"共通","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"cl_chance_notice","label":"チャンス予告音 / 単独","mode":"CLASSIC","scene":"通常時/AT中","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"非ボーナス候補のみなら強矛盾"},{"id":"cl_chance_notice_at","label":"チャンス予告音 / AT中","mode":"CLASSIC","scene":"AT中","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"発生した時点でボーナス濃厚、第1停止消灯でBIG濃厚"},{"id":"cl_slow_notice","label":"スロー予告音 / 発生時","mode":"CLASSIC","scene":"AT中","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"発生した時点でボーナス濃厚"},{"id":"cl_special_notice_normal","label":"特殊予告音 / 回転開始時＋3消灯＋HR非発展","mode":"CLASSIC","scene":"通常時","roleGroups":"suikaAny","exactRoles":"スイカ","denyRoles":"","hotText":"スイカ成立かつ期待度約70%"},{"id":"cl_special_notice_at","label":"特殊予告音 / AT中","mode":"CLASSIC","scene":"AT中","roleGroups":"bonusDense","exactRoles":"ボーナス","denyRoles":"","hotText":"発生した時点でボーナス濃厚"}];
+const ORDER_TOP_TO_BOTTOM = [20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1];
+
+const REAL_REEL = {
+  src: "./assets/reel_full.jpg",
+  // Uploaded source image: 600 x 1531 px.
+  // Left reel crop measured from the full image:
+  reelX: 87,
+  reelY: 168,
+  reelW: 148,
+  reelH: 1338,
+  imageW: 600,
+  imageH: 1531,
+  displayW: 126,
+  windowH: 174,
+  symbolCount: 20
+};
+REAL_REEL.scale = REAL_REEL.displayW / REAL_REEL.reelW;
+REAL_REEL.segmentH = REAL_REEL.reelH * REAL_REEL.scale;
+REAL_REEL.symbolH = REAL_REEL.segmentH / REAL_REEL.symbolCount;
+REAL_REEL.bottomCenterY = REAL_REEL.windowH - REAL_REEL.symbolH / 2;
+let selectedPress = 14;
+let currentSlip = 0;
+let estimateStopLower = 14;
+let mode = "exact";
+
+function mod20(n){while(n>20)n-=20;while(n<1)n+=20;return n;}
+function cssClassFor(sym){return {"スイカ":"sym-watermelon","チェリー":"sym-cherry","星":"sym-star","赤7":"sym-red7","リプレイ":"sym-replay","白7":"sym-white7","黒BAR":"sym-blackbar"}[sym]||"";}
+function displaySymbol(sym){
+  return {
+    "スイカ":"西瓜",
+    "チェリー":"CH",
+    "星":"★",
+    "赤7":"7",
+    "リプレイ":"RE",
+    "白7":"W BAR",
+    "黒BAR":"D BAR"
+  }[sym] || sym;
+}
+
+function svgReplay(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="リプレイ">
+    <defs>
+      <linearGradient id="repG2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#c8fbff"/><stop offset="1" stop-color="#1599e8"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="50" cy="37" rx="38" ry="24" fill="url(#repG2)" stroke="#075d9b" stroke-width="4"/>
+    <ellipse cx="42" cy="28" rx="22" ry="6" fill="#fff" opacity=".55"/>
+    <text x="50" y="43" font-size="20" text-anchor="middle" fill="#ffffff" stroke="#075d9b" stroke-width="3">RE</text>
+  </svg>`;
+}
+
+function svgStar(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="星">
+    <defs>
+      <linearGradient id="starG2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff7a5"/><stop offset="1" stop-color="#f1a900"/>
+      </linearGradient>
+    </defs>
+    <polygon points="50,5 62,28 88,28 67,43 75,68 50,53 25,68 33,43 12,28 38,28"
+      fill="url(#starG2)" stroke="#9f6500" stroke-width="5" stroke-linejoin="round"/>
+    <polygon points="50,17 57,32 73,32 60,42 65,56 50,47 35,56 40,42 27,32 43,32"
+      fill="#ffe66a" opacity=".9"/>
+  </svg>`;
+}
+
+function svgWatermelon(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="スイカ">
+    <defs>
+      <radialGradient id="wmR2" cx=".35" cy=".3" r=".75">
+        <stop offset="0" stop-color="#ff8a75"/><stop offset=".65" stop-color="#ef2438"/><stop offset="1" stop-color="#b30b1c"/>
+      </radialGradient>
+      <linearGradient id="wmSkin2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#8dff8d"/><stop offset="1" stop-color="#0b7f38"/>
+      </linearGradient>
+    </defs>
+    <circle cx="50" cy="37" r="31" fill="url(#wmSkin2)" stroke="#06451f" stroke-width="5"/>
+    <circle cx="50" cy="37" r="23" fill="url(#wmR2)" stroke="#e9ffd8" stroke-width="4"/>
+    <ellipse cx="42" cy="30" rx="2.5" ry="5" fill="#241313" transform="rotate(-25 42 30)"/>
+    <ellipse cx="55" cy="39" rx="2.5" ry="5" fill="#241313" transform="rotate(-25 55 39)"/>
+    <ellipse cx="60" cy="28" rx="2.5" ry="5" fill="#241313" transform="rotate(-25 60 28)"/>
+    <path d="M27 35 C37 28, 46 48, 58 34 C66 25, 72 32, 77 36" fill="none" stroke="#0a5a28" stroke-width="3" opacity=".55"/>
+  </svg>`;
+}
+
+function svgCherry(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="チェリー">
+    <defs>
+      <radialGradient id="chG2" cx=".35" cy=".25" r=".75">
+        <stop offset="0" stop-color="#ffc4d9"/><stop offset=".5" stop-color="#ff347d"/><stop offset="1" stop-color="#a00036"/>
+      </radialGradient>
+      <linearGradient id="leafG2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#aaff8e"/><stop offset="1" stop-color="#168c28"/>
+      </linearGradient>
+    </defs>
+    <path d="M48 28 C51 16, 62 10, 74 10" fill="none" stroke="#246d25" stroke-width="5" stroke-linecap="round"/>
+    <path d="M47 29 C40 18, 31 16, 25 18" fill="none" stroke="#246d25" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="72" cy="14" rx="14" ry="7" fill="url(#leafG2)" stroke="#0b5a1b" stroke-width="3" transform="rotate(-15 72 14)"/>
+    <circle cx="35" cy="47" r="17" fill="url(#chG2)" stroke="#7f002b" stroke-width="4"/>
+    <circle cx="64" cy="47" r="17" fill="url(#chG2)" stroke="#7f002b" stroke-width="4"/>
+    <circle cx="30" cy="40" r="5" fill="#ffd5e5" opacity=".75"/>
+    <circle cx="59" cy="40" r="5" fill="#ffd5e5" opacity=".75"/>
+  </svg>`;
+}
+
+function svgRed7(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="赤7">
+    <defs>
+      <linearGradient id="r7G3" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff7777"/>
+        <stop offset=".45" stop-color="#f00019"/>
+        <stop offset="1" stop-color="#8a000a"/>
+      </linearGradient>
+    </defs>
+    <g transform="skewX(-9)">
+      <text x="50" y="61"
+        font-size="66"
+        text-anchor="middle"
+        fill="url(#r7G3)"
+        stroke="#250006"
+        stroke-width="7"
+        stroke-linejoin="round">7</text>
+      <text x="50" y="61"
+        font-size="66"
+        text-anchor="middle"
+        fill="url(#r7G3)"
+        stroke="#ffb4b4"
+        stroke-width="1.6"
+        stroke-linejoin="round">7</text>
+      <path d="M29 20 H70" stroke="#fff0f0" stroke-width="3" opacity=".75"/>
+      <text x="62" y="54" font-size="10" fill="#fff" stroke="#83000a" stroke-width="1.2">RED</text>
+    </g>
+  </svg>`;
+}
+
+function svgBlackBar(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="黒BAR">
+    <rect x="9" y="17" width="82" height="40" rx="5" fill="#03070a" stroke="#00c9ff" stroke-width="4"/>
+    <rect x="18" y="25" width="64" height="24" rx="2" fill="#07131a" stroke="#024e72" stroke-width="2"/>
+    <text x="50" y="42" font-size="18" text-anchor="middle" fill="#16d9ff" stroke="#00151f" stroke-width="2.5">BAR</text>
+  </svg>`;
+}
+
+function svgWhite7(){
+  return `
+  <svg class="symbolSvg" viewBox="0 0 100 74" aria-label="白7">
+    <defs>
+      <linearGradient id="w7G3" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset=".48" stop-color="#f2ffff"/>
+        <stop offset="1" stop-color="#b7f4ff"/>
+      </linearGradient>
+    </defs>
+    <g transform="skewX(-9)">
+      <text x="50" y="61"
+        font-size="66"
+        text-anchor="middle"
+        fill="url(#w7G3)"
+        stroke="#4bcfff"
+        stroke-width="7"
+        stroke-linejoin="round">7</text>
+      <text x="50" y="61"
+        font-size="66"
+        text-anchor="middle"
+        fill="url(#w7G3)"
+        stroke="#ffffff"
+        stroke-width="1.8"
+        stroke-linejoin="round">7</text>
+      <path d="M29 20 H70" stroke="#ffffff" stroke-width="3" opacity=".85"/>
+      <text x="61" y="54" font-size="10" fill="#1aa7ff" stroke="#ffffff" stroke-width="1.2">ULTRA</text>
+    </g>
+  </svg>`;
+}
+
+function svgSymbol(sym){
+  if (sym === "リプレイ") return svgReplay();
+  if (sym === "星") return svgStar();
+  if (sym === "スイカ") return svgWatermelon();
+  if (sym === "チェリー") return svgCherry();
+  if (sym === "赤7") return svgRed7();
+  if (sym === "黒BAR") return svgBlackBar();
+  if (sym === "白7") return svgWhite7();
+  return `<svg class="symbolSvg" viewBox="0 0 100 74"><text x="50" y="44" font-size="18" text-anchor="middle" fill="#111">${displaySymbol(sym)}</text></svg>`;
+}
+
+function symbolBadgeHTML(num, dir="none"){
+  const sym = REEL[num];
+  const cls = dir === "up" ? "inUp" : (dir === "down" ? "inDown" : "");
+  return `<div class="reelSlideWrap ${cls}"><div class="symbol ${cssClassFor(sym)}">${svgSymbol(sym)}</div></div>`;
+}function realReelHTML(lowerNum, dir="none"){
+  const idx = ORDER_TOP_TO_BOTTOM.indexOf(Number(lowerNum));
+  const safeIdx = idx >= 0 ? idx : 0;
+  const centerY = REAL_REEL.segmentH + (safeIdx + 0.5) * REAL_REEL.symbolH;
+  const y = REAL_REEL.bottomCenterY - centerY;
+  const inClass = dir === "up" ? "inUp" : (dir === "down" ? "inDown" : "");
+
+  return `<div class="realReelStrip ${inClass}" style="transform:translateY(${y.toFixed(2)}px)">
+    <div class="realReelSegment"></div>
+    <div class="realReelSegment"></div>
+    <div class="realReelSegment"></div>
+  </div>`;
+}
+
+function renderThreeReel(prefix, lowerNum, dir="none"){
+  const win = document.getElementById(prefix + "ReelWindow");
+  if (!win) return;
+
+  win.innerHTML = realReelHTML(lowerNum, dir);
+  win.style.width = `${REAL_REEL.displayW}px`;
+  win.style.height = `${REAL_REEL.windowH}px`;
+}
+
+function getStopLower(){
+  return mod20(selectedPress + currentSlip);
+}
+
+function pulseText(el){
+  if (!el) return;
+  el.classList.remove("pulse");
+  void el.offsetWidth;
+  el.classList.add("pulse");
+}
+
+function updateHints(pressChanged=true, stopChanged=true){
+  const stopLower = getStopLower();
+  const pressHint = document.getElementById("pressHint");
+  const stopHint = document.getElementById("stopHint");
+
+  const pressText = `${selectedPress} ${REEL[selectedPress]}`;
+  const stopText = currentSlip === 0 ? "ビタ停止" : `${currentSlip}コマ滑り`;
+
+  if (pressHint.textContent !== pressText) {
+    pressHint.textContent = pressText;
+    if (pressChanged) pulseText(pressHint);
+  }
+  if (stopHint.textContent !== stopText) {
+    stopHint.textContent = stopText;
+    if (stopChanged) pulseText(stopHint);
+  }
+
+  document.getElementById("pressSelect").value = String(selectedPress);
+  document.getElementById("slipSelect").value = String(currentSlip);
+}
+
+function updateDualReels(pressDir="none", stopDir="none"){
+  renderThreeReel("press", selectedPress, pressDir);
+  renderThreeReel("stop", getStopLower(), stopDir);
+  updateHints(pressDir !== "none", stopDir !== "none");
+  updateStopButtons();
+}
+
+function setSelectedPress(num, dir="none"){
+  selectedPress = mod20(Number(num));
+  updateDualReels(dir, dir === "none" ? "none" : dir);
+  if (mode === "exact") analyze();
+}
+
+function updateStopButtons(){
+  const up = document.getElementById("stopUp");
+  const down = document.getElementById("stopDown");
+  if (!up || !down) return;
+
+  // ▲はスベリ -1、▼はスベリ +1。
+  // 0と4の端では見た目だけ弱くし、クリックしても移動しない。
+  up.classList.toggle("limitStop", currentSlip <= 0);
+  down.classList.toggle("limitStop", currentSlip >= 4);
+}
+
+function setSlip(nextSlip, dir="none"){
+  const clamped = Math.max(0, Math.min(4, Number(nextSlip)));
+
+  if (clamped === currentSlip) {
+    updateStopButtons();
+    return;
+  }
+
+  currentSlip = clamped;
+  updateDualReels("none", dir);
+  updateStopButtons();
+
+  if (mode === "exact") analyze();
+}
+
+function nudgePress(delta){
+  // delta < 0: 図柄を上へ動かす / delta > 0: 図柄を下へ動かす
+  // 下段基準番号は、図柄を下へ動かすと +1、上へ動かすと -1 になる。
+  const nextPress = mod20(selectedPress + delta);
+  setSelectedPress(nextPress, delta > 0 ? "down" : "up");
+}
+
+function nudgeStop(delta){
+  // 右リールは0〜4コマ滑りの範囲だけを動かす。
+  // ▼で図柄を下へ動かす = スベリを+1、▲で図柄を上へ動かす = スベリを-1。
+  setSlip(currentSlip + delta, delta > 0 ? "down" : "up");
+}
+
+function updateEstimateReel(dir="none"){
+  renderThreeReel("estimate", estimateStopLower, dir);
+  const hint = document.getElementById("estimateHint");
+  if (hint) {
+    const txt = `${estimateStopLower} ${REEL[estimateStopLower]}`;
+    if (hint.textContent !== txt) {
+      hint.textContent = txt;
+      pulseText(hint);
+    }
+  }
+}
+
+function nudgeEstimate(delta){
+  estimateStopLower = mod20(estimateStopLower + delta);
+  updateEstimateReel(delta > 0 ? "down" : "up");
+  if (mode === "stop") analyze();
+}
+
+function lineSymbolsFromLower(lower){return {upper:mod20(lower+2),middle:mod20(lower+1),lower:mod20(lower)};}
+function roleCategory(role){if(role.includes("ハズレ"))return"hazure";if(role.includes("リプレイ"))return"replay";if(role.includes("3枚役"))return"sanmai";if(role.includes("チェリー"))return"cherry";if(role==="スイカA")return"suikaA";if(role==="スイカB")return"suikaB";if(role.includes("ボーナス濃厚"))return"bonusDense";if(role.includes("リーチ目役"))return"reach";return"other";}
+function groupMatcher(group){return function(role){const cat=roleCategory(role);if(group==="hazure")return cat==="hazure";if(group==="replay")return cat==="replay";if(group==="sanmai")return cat==="sanmai";if(group==="cherry")return cat==="cherry";if(group==="suikaA")return cat==="suikaA";if(group==="suikaB")return cat==="suikaB";if(group==="suikaAny")return cat==="suikaA"||cat==="suikaB";if(group==="bonusDense")return cat==="bonusDense"||cat==="reach";if(group==="reach")return cat==="reach";if(group==="rare")return cat==="cherry"||cat==="suikaA"||cat==="suikaB"||cat==="bonusDense"||cat==="reach";if(group==="koyakuPlus")return cat!=="hazure";if(group==="notCherry")return cat!=="cherry";return false;};}
+function roleMatchesGroups(role,roleGroups){if(!roleGroups)return false;return roleGroups.split("|").some(g=>groupMatcher(g.trim())(role));}
+function unique(arr){return [...new Set(arr)];}
+function byRoleSort(a,b){const order=["ハズレ(0枚)","ハズレ(1枚)","リプレイ","3枚役","ボーナス濃厚3枚役","チェリー","ボーナス濃厚チェリー","スイカA","スイカB"];const ia=order.indexOf(a),ib=order.indexOf(b);return(ia===-1?99:ia)-(ib===-1?99:ib)||a.localeCompare(b,"ja");}
+function exactAnalyze(){
+  const press = selectedPress;
+  const slip = currentSlip;
+  const stop = getStopLower();
+  const rows = CONTROL_DATA.filter(r => r.press === press && r.slip === slip);
+  const roles = unique(rows.map(r => r.role)).sort(byRoleSort);
+  return {type:"exact", press, slip, stop, rows, roles, line:lineSymbolsFromLower(stop), hot:buildHotScore(roles, "exact")};
+}
+
+function roughPressSet(area){const all=ORDER_TOP_TO_BOTTOM;const around=(center,radius=2)=>{const res=[];for(let d=-radius;d<=radius;d++)res.push(mod20(center+d));return res;};if(area==="all")return new Set(all);if(area==="red7")return new Set(around(16,3));if(area==="blackbar")return new Set(around(3,3));if(area==="white7")return new Set(around(10,3));if(area==="watermelon")return new Set([20,17,14,9,2,19,18,16,15,13,10,8,3,1]);if(area==="cherry")return new Set([...around(19,2),...around(6,2)]);return new Set(all);}
+function stopAnalyze(){
+  const lower = estimateStopLower;
+  const rough = document.getElementById("roughAreaSelect").value;
+  const pressAllowed = roughPressSet(rough);
+
+  const candidates = [];
+  for (let slip = 0; slip <= 4; slip++) {
+    const press = mod20(lower - slip);
+    if (!pressAllowed.has(press)) continue;
+
+    const rows = CONTROL_DATA.filter(r => r.press === press && r.slip === slip && r.stop === lower);
+    if (rows.length) {
+      candidates.push({
+        lower,
+        press,
+        slip,
+        rows,
+        roles: unique(rows.map(r => r.role)).sort(byRoleSort)
+      });
+    }
+  }
+
+  const roles = unique(candidates.flatMap(c => c.roles)).sort(byRoleSort);
+  return {
+    type:"stop",
+    lower,
+    rough,
+    candidates,
+    roles,
+    line: lineSymbolsFromLower(lower),
+    hot: buildHotScore(roles, "estimate")
+  };
+}
+
+const EFFECT_TUNING = {
+  // DMM解析テキスト＋ユーザー補足による手動補正。
+  // baseHotは「演出自体のざっくり期待感」。実確率ではなくアツさ度の土台。
+  rm_push_iris_chance: {
+    roleGroups: "suikaAny|bonusDense|reach",
+    baseHot: 66,
+    contradictionScore: 92,
+    rank: "A",
+    note: "スイカ or ボーナス。ボーナス期待度約66%。"
+  },
+  rm_push_slip_sound: {
+    roleGroups: "suikaAny|bonusDense|reach",
+    baseHot: 90,
+    contradictionScore: 96,
+    rank: "S",
+    note: "スイカ or ボーナス。ボーナス期待度約90%、ボーナス時BB濃厚。"
+  },
+  rm_su_iris_su2: {
+    roleGroups: "cherry|bonusDense|reach",
+    baseHot: 36,
+    contradictionScore: 88,
+    rank: "A",
+    note: "チェリー or ボーナス。チェリー候補なしならボーナス期待。"
+  },
+  rm_su_iris_su3: {
+    roleGroups: "sanmai|suikaB|bonusDense|reach",
+    baseHot: 42,
+    contradictionScore: 88,
+    rank: "A",
+    note: "7☆☆ or スイカB or ボーナス。"
+  },
+  rm_su_iris_su4: {
+    roleGroups: "sanmai|suikaA|bonusDense|reach",
+    baseHot: 42,
+    contradictionScore: 88,
+    rank: "A",
+    note: "7☆☆ or スイカA or ボーナス。"
+  },
+  rm_su_iris_su5: {
+    roleGroups: "suikaA|bonusDense|reach",
+    baseHot: 55,
+    contradictionScore: 90,
+    rank: "A",
+    note: "スイカA or ボーナス。"
+  },
+  rm_su_egg_su2: {
+    roleGroups: "replay|bonusDense|reach",
+    baseHot: 30,
+    contradictionScore: 82,
+    rank: "B",
+    note: "リプレイ or ボーナス。"
+  },
+  rm_su_egg_su3: {
+    roleGroups: "sanmai|suikaA|bonusDense|reach",
+    baseHot: 42,
+    contradictionScore: 88,
+    rank: "A",
+    note: "7☆☆ or スイカA or ボーナス。"
+  },
+  rm_su_egg_su4: {
+    roleGroups: "sanmai|suikaB|bonusDense|reach",
+    baseHot: 42,
+    contradictionScore: 88,
+    rank: "A",
+    note: "7☆☆ or スイカB or ボーナス。"
+  },
+  rm_su_egg_su5: {
+    roleGroups: "suikaA|bonusDense|reach",
+    baseHot: 55,
+    contradictionScore: 90,
+    rank: "A",
+    note: "スイカA or ボーナス。"
+  },
+  rm_su_both_su4: {
+    roleGroups: "suikaA|bonusDense|reach",
+    baseHot: 60,
+    contradictionScore: 92,
+    rank: "A",
+    note: "スイカA or ボーナス。"
+  },
+  rm_su_both_su5: {
+    roleGroups: "suikaB|bonusDense|reach",
+    baseHot: 60,
+    contradictionScore: 92,
+    rank: "A",
+    note: "スイカB or ボーナス。"
+  },
+  rm_push_bashun: {
+    roleGroups: "cherry|bonusDense|reach",
+    baseHot: 35,
+    contradictionScore: 86,
+    rank: "A",
+    note: "チェリー対応。チェリー候補なしなら矛盾候補。"
+  },
+  common_delay: {
+    roleGroups: "cherry|bonusDense|reach",
+    baseHot: 34,
+    contradictionScore: 84,
+    rank: "A",
+    note: "チェリー or ボーナス。"
+  }
+};
+
+function getTunedRule(rule){
+  if (!rule) return null;
+  const tuned = EFFECT_TUNING[rule.id] || {};
+  return {
+    ...rule,
+    roleGroups: tuned.roleGroups || rule.roleGroups,
+    baseHot: tuned.baseHot ?? inferBaseHot(rule),
+    contradictionScore: tuned.contradictionScore ?? inferContradictionScore(rule),
+    rank: tuned.rank || inferContradictionRank(rule),
+    tuningNote: tuned.note || rule.hotText || ""
+  };
+}
+
+function inferBaseHot(rule){
+  const text = `${rule.label || ""} ${rule.exactRoles || ""} ${rule.hotText || ""} ${rule.note || ""}`;
+
+  if (text.includes("ボーナス濃厚")) return 94;
+  if (text.includes("BIG濃厚")) return 94;
+  if (text.includes("大チャンス")) return 70;
+  if (text.includes("期待度約70")) return 70;
+  if (text.includes("期待度約75")) return 75;
+  if (text.includes("期待度50")) return 55;
+  if (text.includes("ボーナス期待")) return 55;
+  if (text.includes("小役以上")) return 28;
+  if (text.includes("スイカ")) return 38;
+  if (text.includes("チェリー")) return 32;
+  if (text.includes("7☆☆")) return 36;
+  if (text.includes("リプレイ")) return 25;
+  if (text.includes("ハズレ")) return 18;
+
+  return 24;
+}
+
+function inferContradictionScore(rule){
+  const text = `${rule.label || ""} ${rule.exactRoles || ""} ${rule.hotText || ""} ${rule.note || ""}`;
+
+  if (text.includes("ボーナス濃厚") || text.includes("強矛盾")) return 96;
+  if (text.includes("BIG濃厚")) return 96;
+  if (text.includes("矛盾") || text.includes("候補外") || text.includes("否定")) return 88;
+  if (text.includes("ボーナス期待")) return 82;
+  if (text.includes("小役以上")) return 82;
+
+  return 72;
+}
+
+function inferContradictionRank(rule){
+  const score = inferContradictionScore(rule);
+  if (score >= 94) return "S";
+  if (score >= 86) return "A";
+  if (score >= 74) return "B";
+  return "C";
+}
+
+function roleSummary(roles){
+  const cats = roles.map(roleCategory);
+  return {
+    total: roles.length,
+    hasHazure: cats.includes("hazure"),
+    hasReplay: cats.includes("replay"),
+    hasSanmai: cats.includes("sanmai"),
+    hasCherry: cats.includes("cherry"),
+    hasSuikaA: cats.includes("suikaA"),
+    hasSuikaB: cats.includes("suikaB"),
+    hasSuikaAny: cats.includes("suikaA") || cats.includes("suikaB"),
+    hasReach: cats.includes("reach"),
+    hasBonusDense: cats.includes("bonusDense"),
+    hasBonusLike: cats.includes("reach") || cats.includes("bonusDense")
+  };
+}
+
+function roleMatchesGroupsTuned(role, roleGroups){
+  if (!roleGroups) return false;
+  return roleGroups.split("|").some(g => groupMatcher(g.trim())(role));
+}
+
+function detectSuikaABMismatch(summary, rule){
+  if (!rule || !rule.roleGroups) return null;
+
+  const wantsA = rule.roleGroups.split("|").includes("suikaA");
+  const wantsB = rule.roleGroups.split("|").includes("suikaB");
+  const wantsAny = rule.roleGroups.split("|").includes("suikaAny");
+
+  if (wantsAny || (!wantsA && !wantsB)) return null;
+
+  if (wantsA && !wantsB) {
+    if (summary.hasSuikaB && !summary.hasSuikaA) return "スイカA対応演出に対して、停止系はスイカB候補寄り。A/B矛盾候補。";
+    if (summary.hasSuikaA && summary.hasSuikaB) return "スイカA候補あり。ただしスイカB候補も残るためA/B両対応寄り。";
+  }
+
+  if (wantsB && !wantsA) {
+    if (summary.hasSuikaA && !summary.hasSuikaB) return "スイカB対応演出に対して、停止系はスイカA候補寄り。A/B矛盾候補。";
+    if (summary.hasSuikaA && summary.hasSuikaB) return "スイカB候補あり。ただしスイカA候補も残るためA/B両対応寄り。";
+  }
+
+  return null;
+}
+
+function buildHotScore(roles, accuracy="estimate"){
+  const effect = document.getElementById("effectSelect").value;
+  const rawRule = getEffectRule(effect);
+  const rule = getTunedRule(rawRule);
+  const summary = roleSummary(roles);
+
+  const reachRoles = roles.filter(r => roleCategory(r) === "reach");
+  const bonusRoles = roles.filter(r => roleCategory(r) === "bonusDense");
+  const koyakuRoles = roles.filter(r => {
+    const c = roleCategory(r);
+    return c !== "reach" && c !== "bonusDense";
+  });
+
+  let matched = [];
+  let mismatched = [];
+  const hasRule = !!(rule && rule.roleGroups);
+
+  if (hasRule) {
+    matched = roles.filter(r => roleMatchesGroupsTuned(r, rule.roleGroups));
+    mismatched = roles.filter(r => !roleMatchesGroupsTuned(r, rule.roleGroups));
+  }
+
+  const total = Math.max(roles.length, 1);
+  const hotRoles = [...reachRoles, ...bonusRoles];
+  const hotRatio = hotRoles.length / total;
+  const exactBonus = accuracy === "exact" ? 4 : 0;
+
+  const suikaMismatchText = detectSuikaABMismatch(summary, rule);
+
+  let score = 0;
+  let comment = "対応役候補が中心です。現時点では順当寄り。";
+  let hasContradiction = false;
+  let softMismatch = false;
+  let specialNote = rule ? rule.tuningNote : "";
+
+  if (!roles.length) {
+    score = 0;
+    comment = "候補役が見つかりません。停止形・ざっくり押し位置の条件を確認してください。";
+  } else if (hasRule && matched.length === 0) {
+    hasContradiction = true;
+    score = rule.contradictionScore + exactBonus;
+
+    // スイカA/Bのように対応先がはっきりしている場合は強く見る。
+    if (suikaMismatchText) score = Math.max(score, accuracy === "exact" ? 94 : 88);
+
+    if (summary.hasBonusLike) score = Math.max(score, accuracy === "exact" ? 97 : 94);
+
+    comment = accuracy === "exact"
+      ? "押し位置と停止位置が確定した上で、演出対応役が候補内に見当たりません。示唆矛盾候補としてかなり強め。"
+      : "演出対応役が候補内に見当たりません。示唆矛盾候補としてかなり強め。";
+
+    if (suikaMismatchText) comment = suikaMismatchText;
+  } else {
+    // 演出自体の基礎アツさを土台にする。
+    score = rule ? rule.baseHot : 12;
+
+    // 候補側の強さを加点。
+    score += hotRatio * 24;
+    score += (bonusRoles.length / total) * 14;
+
+    if (hasRule) {
+      const mismatchHot = mismatched.filter(r => {
+        const c = roleCategory(r);
+        return c === "reach" || c === "bonusDense";
+      });
+
+      // 対応役も残りつつ、リーチ目役/ボーナス系も残るならアツさを維持・加点。
+      score += (mismatchHot.length / total) * 18;
+    }
+
+    // スイカA/Bの一方対応で両方候補が残る場合は中程度。
+    if (suikaMismatchText && suikaMismatchText.includes("両対応")) {
+      score = Math.max(score, accuracy === "exact" ? 45 : 38);
+      comment = suikaMismatchText;
+    }
+
+    // 対応役のみで、強演出でもない場合は過熱しすぎない。
+    if (hasRule && matched.length > 0 && hotRoles.length === 0 && mismatched.length === 0) {
+      score = Math.min(score, Math.max(22, rule.baseHot));
+      comment = "演出対応役として順当。停止系だけでは法則崩れ感は薄め。";
+    } else if (!comment.includes("両対応")) {
+      if (score >= 88) {
+        comment = rule && rule.id === "rm_push_slip_sound"
+          ? "ペラポン系の強演出。スイカ対応ありでもボーナス期待はかなり高め。"
+          : "かなり強め。リーチ目役・ボーナス系候補が濃く残っています。";
+      } else if (score >= 66) {
+        comment = rule && rule.id === "rm_push_iris_chance"
+          ? "アイリスチャンス。スイカ対応ありでもボーナス期待は高め。"
+          : "強め。対応役もありますが、リーチ目役やボーナス系候補も十分に残ります。";
+      } else if (score >= 45) {
+        comment = "中程度。対応役も残りますが、停止形としては少し注目。";
+      } else if (score >= 25) {
+        comment = "やや弱め。対応小役寄りですが、候補は確認できます。";
+      } else {
+        comment = "弱め。演出対応役として順当寄りです。";
+      }
+    }
+
+    if (roles.length === 1) {
+      const c = roleCategory(roles[0]);
+      if (c === "reach") score += 14 + exactBonus;
+      if (c === "bonusDense") score += 18 + exactBonus;
+    }
+  }
+
+  score = Math.max(0, Math.min(98, Math.round(score)));
+
+  return {
+    score,
+    stars: scoreToStars(score),
+    comment,
+    koyakuCount: koyakuRoles.length,
+    reachCount: reachRoles.length,
+    bonusCount: bonusRoles.length,
+    reachRoles,
+    bonusRoles,
+    koyakuRoles,
+    matched,
+    mismatched,
+    ruleLabel: rule ? rule.label : "未選択",
+    hasContradiction,
+    softMismatch,
+    accuracy,
+    specialNote,
+    suikaMismatchText
+  };
+}
+
+function scoreToStars(score){
+  const filled = Math.max(0, Math.min(5, Math.round(score / 20)));
+  return "★".repeat(filled) + "☆".repeat(5 - filled);
+}
+
+function getEffectRule(effect){return EFFECT_DATA.find(e=>e.id===effect)||null;}
+function effectJudge(roles) {
+  const effect = document.getElementById("effectSelect").value;
+  const rawRule = getEffectRule(effect);
+  const rule = getTunedRule(rawRule);
+  if (!rule) return {effect, status:"none", label:"演出未選択", detail:"演出照合は行っていません。"};
+
+  const matched = roles.filter(r => roleMatchesGroupsTuned(r, rule.roleGroups));
+  const roleList = roles.length ? roles.join(" / ") : "該当候補なし";
+  const ruleText = rule.exactRoles || rule.roleGroups || "条件未設定";
+  const summary = roleSummary(roles);
+  const suikaMismatchText = detectSuikaABMismatch(summary, rule);
+
+  if (!rule.roleGroups) {
+    return {
+      effect,
+      status:"note",
+      label:"演出メモ",
+      detail:`${rule.label}：${rule.hotText || ruleText}<br><span class="small">この演出は対応役データが粗いため、矛盾判定は保留です。現在の候補：${roleList}</span>`
+    };
+  }
+
+  if (matched.length === 0) {
+    return {
+      effect,
+      status:"hot",
+      label:"示唆矛盾候補 / 強め",
+      detail:`${rule.label}<br>対応目安：${rule.exactRoles || ruleText}<br>${suikaMismatchText || rule.tuningNote || rule.hotText || "候補役と演出対応役が一致していません。"}<br><span class="small">現在の候補：${roleList}</span>`
+    };
+  }
+
+  const allBonusLike = roles.length > 0 && roles.every(r => {
+    const c = roleCategory(r);
+    return c === "bonusDense" || c === "reach";
+  });
+  return {
+    effect,
+    status: allBonusLike ? "hot" : "ok",
+    label: allBonusLike ? "ボーナス系候補が強め" : "対応役あり",
+    detail:`${rule.label}<br>対応目安：${rule.exactRoles || ruleText}<br>一致候補：${matched.join(" / ")}<br><span class="small">${suikaMismatchText || rule.tuningNote || rule.hotText || ""}</span>`
+  };
+}
+function renderRoles(roles){if(!roles.length)return`<p class="small">該当役なし。入力条件が厳しすぎる可能性があります。</p>`;return`<div class="pills">${roles.map(r=>{const cat=roleCategory(r);const cls=cat==="reach"||cat==="bonusDense"?"hot":(cat==="suikaA"||cat==="suikaB"||cat==="cherry"?"ok":"");return`<span class="pill ${cls}">${r}</span>`;}).join("")}</div>`;}
+function renderLine(line){return`<table class="table"><tr><th>ライン</th><th>番号</th><th>図柄</th></tr><tr><td>上段</td><td>${line.upper}</td><td>${REEL[line.upper]}</td></tr><tr><td>中段</td><td>${line.middle}</td><td>${REEL[line.middle]}</td></tr><tr><td>下段</td><td>${line.lower}</td><td>${REEL[line.lower]}</td></tr></table>`;}
+function formatMove(press,stop,slip){return slip===0?`${press} ${REEL[press]} → ${stop} ${REEL[stop]}`:`${press} ${REEL[press]} → ${slip}コマ滑り → ${stop} ${REEL[stop]}`;}
+function renderHotCard(hot){
+  const extra = [hot.specialNote, hot.suikaMismatchText].filter(Boolean).join("<br>");
+  return `<div class="resultCard"><h3>アツさ度</h3>
+    <div class="hotScoreBox">
+      <div class="hotScoreMain">
+        <div>
+          <div class="hotStars">${hot.stars}</div>
+          <div class="hotComment">${hot.comment}</div>
+        </div>
+        <div class="hotScoreNum">${hot.score}</div>
+      </div>
+      <div class="breakdownGrid">
+        <div class="breakdownItem"><div class="label">対応小役</div><div class="count">${hot.koyakuCount}</div></div>
+        <div class="breakdownItem"><div class="label">リーチ目役</div><div class="count">${hot.reachCount}</div></div>
+        <div class="breakdownItem"><div class="label">ボーナス系</div><div class="count">${hot.bonusCount}</div></div>
+      </div>
+      ${extra ? `<div class="notice">${extra}</div>` : ""}
+      <p class="small">※停止形・押し位置・演出から残った候補を元にした、実戦補助用のざっくり判定です。</p>
+    </div>
+  </div>`;
+}
+
+function renderResult(res){
+  let html = "";
+
+  if (res.type === "exact") {
+    html += renderHotCard(res.hot);
+    html += `<div class="resultCard"><h3>停止計算</h3><div class="pills"><span class="pill hot">${formatMove(res.press,res.stop,res.slip)}</span><span class="pill">スベリ：${res.slip}コマ</span><span class="pill">精度：押し位置確定</span>${res.hot.hasContradiction ? '<span class="pill hot">示唆矛盾候補</span>' : ''}</div></div><div class="resultCard"><h3>停止形</h3>${renderLine(res.line)}</div>`;
+  } else {
+    const hot = res.hot;
+    html += renderHotCard(hot);
+
+    html += `<div class="resultCard"><h3>停止形から推測</h3>${renderLine(res.line)}<div class="pills" style="margin-top:8px;"><span class="pill">ざっくり押し：${roughLabel(res.rough)}</span><span class="pill">候補：${res.candidates.length}パターン</span><span class="pill">演出：${hot.ruleLabel}</span>${hot.hasContradiction ? '<span class="pill hot">示唆矛盾候補</span>' : ''}</div></div>`;
+
+    if (res.candidates.length) {
+      html += `<div class="resultCard"><h3>候補押し位置</h3><table class="table"><tr><th>推定移動</th><th>推定押し</th><th>スベリ</th><th>該当役</th></tr>${res.candidates.map(c => `<tr><td>${formatMove(c.press,c.lower,c.slip)}</td><td>${c.press} / ${REEL[c.press]}</td><td>${c.slip}コマ</td><td>${c.roles.join(" / ")}</td></tr>`).join("")}</table></div>`;
+    }
+  }
+
+  const judge = effectJudge(res.roles);
+  html += `<div class="resultCard"><h3>出てくる可能性がある役</h3>${renderRoles(res.roles)}</div><div class="resultCard"><h3>演出照合</h3><div class="notice"><strong>${judge.label}</strong><br>${judge.detail}</div></div><div class="resultCard"><h3>判定メモ</h3><p class="small">左1st停止制御表と演出整理データを使用。フラグE1/E2・小役重複の直接識別は制御表上では未対応のため、PUSH系などは演出補正として扱っています。</p></div>`;
+
+  document.getElementById("resultArea").innerHTML = html;
+}
+
+function roughLabel(id){
+  return {
+    all:"不明 / 全範囲",
+    red7:"赤7付近",
+    white7:"白7付近",
+    blackbar:"黒BAR付近",
+    watermelon:"スイカ付近",
+    cherry:"チェリー付近"
+  }[id] || id;
+}
+
+function analyze(){const res=mode==="exact"?exactAnalyze():stopAnalyze();renderResult(res);}
+function switchMode(next){
+  mode = next;
+  document.getElementById("tabExact").classList.toggle("active", mode === "exact");
+  document.getElementById("tabStop").classList.toggle("active", mode === "stop");
+  document.getElementById("modeExact").classList.toggle("active", mode === "exact");
+  document.getElementById("modeStop").classList.toggle("active", mode === "stop");
+  document.getElementById("exactReelArea").classList.toggle("hiddenMode", mode !== "exact");
+  document.getElementById("estimateReelArea").classList.toggle("hiddenMode", mode !== "stop");
+  if (mode === "stop") updateEstimateReel();
+  analyze();
+}
+
+function setupSelects(){
+  const press = document.getElementById("pressSelect");
+  press.innerHTML = "";
+  ORDER_TOP_TO_BOTTOM.forEach(num => {
+    const opt = document.createElement("option");
+    opt.value = num;
+    opt.textContent = `${num}：${REEL[num]}`;
+    press.appendChild(opt);
+  });
+  press.addEventListener("change", e => setSelectedPress(Number(e.target.value)));
+
+  const eff = document.getElementById("effectSelect");
+  eff.innerHTML = `<option value="none">未選択</option>`;
+  const modes = ["共通","REMIX","DISC UP","CLASSIC"];
+  modes.forEach(m => {
+    const list = EFFECT_DATA.filter(e => e.mode === m);
+    if (!list.length) return;
+    const og = document.createElement("optgroup");
+    og.label = m;
+    list.forEach(e => {
+      const opt = document.createElement("option");
+      opt.value = e.id;
+      opt.textContent = e.label;
+      og.appendChild(opt);
+    });
+    eff.appendChild(og);
+  });
+}
+
+function bindGestures(stage,handler){if(!stage)return;stage.addEventListener("wheel",e=>{e.preventDefault();handler(e.deltaY>0?1:-1);},{passive:false});let startY=null;stage.addEventListener("touchstart",e=>{startY=e.touches[0].clientY;},{passive:true});stage.addEventListener("touchend",e=>{if(startY===null)return;const diff=e.changedTouches[0].clientY-startY;if(Math.abs(diff)>20)handler(diff>0?1:-1);startY=null;},{passive:true});}
+function init(){
+  setupSelects();
+  currentSlip = 0;
+  updateDualReels();
+  updateEstimateReel();
+
+  document.getElementById("pressUp").addEventListener("click", () => nudgePress(-1));
+  document.getElementById("pressDown").addEventListener("click", () => nudgePress(1));
+  document.getElementById("stopUp").addEventListener("click", () => nudgeStop(-1));
+  document.getElementById("stopDown").addEventListener("click", () => nudgeStop(1));
+  document.getElementById("estimateUp").addEventListener("click", () => nudgeEstimate(-1));
+  document.getElementById("estimateDown").addEventListener("click", () => nudgeEstimate(1));
+
+  document.getElementById("tabExact").addEventListener("click", () => switchMode("exact"));
+  document.getElementById("tabStop").addEventListener("click", () => switchMode("stop"));
+  document.getElementById("analyzeBtn").addEventListener("click", analyze);
+
+  ["roughAreaSelect","effectSelect"].forEach(id => {
+    const node = document.getElementById(id);
+    if (node) node.addEventListener("change", analyze);
+  });
+
+  bindGestures(document.getElementById("pressReelWindow"), nudgePress);
+  bindGestures(document.getElementById("stopReelWindow"), nudgeStop);
+  bindGestures(document.getElementById("estimateReelWindow"), nudgeEstimate);
+
+  switchMode("exact");
+}
+
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+</script>
+</body>
+</html>
